@@ -7,12 +7,20 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [projectForm, setProjectForm] = useState({ title: '', description: '', link: '' });
+  const [projectForm, setProjectForm] = useState({ title: '', description: '', link: '', tech_stack: '' });
   const [myProjects, setMyProjects] = useState([]);
+  const [editingProject, setEditingProject] = useState(null); // null = add mode, object = edit mode
 
   // --- Company States ---
   const [jobForm, setJobForm] = useState({ title: '', description: '', requirements: '', location: '', deadline: '' });
   const [myJobs, setMyJobs] = useState([]);
+
+  // --- Feature 6: Deadline helper ---
+  const isDeadlinePassed = (deadline) => {
+    if (!deadline) return false;
+    const today = new Date().toISOString().split('T')[0];
+    return deadline < today;
+  };
 
   useEffect(() => {
     fetchNotifications();
@@ -66,12 +74,42 @@ export default function Dashboard() {
 
   const handleAddProject = async (e) => {
     e.preventDefault();
+    if (editingProject) {
+      // Edit mode — call PUT
+      try {
+        await axios.put(`http://localhost:5000/api/portal/projects/${editingProject.id}`, projectForm);
+        alert("✅ Project updated successfully!");
+        setEditingProject(null);
+        setProjectForm({ title: '', description: '', link: '', tech_stack: '' });
+        fetchMyProjects();
+      } catch (err) { alert("Error updating project."); }
+    } else {
+      // Add mode — call POST
+      try {
+        await axios.post('http://localhost:5000/api/portal/projects', { ...projectForm, student_id: user.id });
+        alert("✅ Project showcase linked to your profile!");
+        setProjectForm({ title: '', description: '', link: '', tech_stack: '' });
+        fetchMyProjects();
+      } catch (err) { alert("Error adding showcase record."); }
+    }
+  };
+
+  const handleEditProject = (project) => {
+    setEditingProject(project);
+    setProjectForm({ title: project.title, description: project.description || '', link: project.link || '', tech_stack: project.tech_stack || '' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProject(null);
+    setProjectForm({ title: '', description: '', link: '', tech_stack: '' });
+  };
+
+  const handleDeleteProject = async (id) => {
+    if (!window.confirm("Remove this project from your showcase?")) return;
     try {
-      await axios.post('http://localhost:5000/api/portal/projects', { ...projectForm, student_id: user.id });
-      alert("✅ Project showcase linked to your profile!");
-      setProjectForm({ title: '', description: '', link: '' });
+      await axios.delete(`http://localhost:5000/api/portal/projects/${id}`);
       fetchMyProjects();
-    } catch (err) { alert("Error adding showcase record."); }
+    } catch (err) { alert("Error deleting project."); }
   };
 
   const handleApply = async (jobId) => {
@@ -284,15 +322,20 @@ export default function Dashboard() {
                         <span>•</span>
                         <span>📝 Requirements: <strong>{job.requirements || 'N/A'}</strong></span>
                         <span>•</span>
-                        <span>⏰ Deadline: <strong style={{ color: '#ef4444' }}>{job.deadline}</strong></span>
+                        <span>⏰ Deadline: <strong style={{ color: isDeadlinePassed(job.deadline) ? '#b91c1c' : '#ef4444' }}>{job.deadline}</strong></span>
                       </div>
-                      <button onClick={() => handleApply(job.id)} style={styles.applyInlineBtn}>Apply For Role</button>
+                      {/* Feature 6: Show Apply button only when deadline has not passed */}
+                      {isDeadlinePassed(job.deadline) ? (
+                        <span style={styles.deadlineClosedBadge}>🔒 Applications Closed</span>
+                      ) : (
+                        <button onClick={() => handleApply(job.id)} style={styles.applyInlineBtn}>Apply For Role</button>
+                      )}
                     </div>
                   ))}
                 </div>
               </section>
 
-              {/* Student Project Submission Showcasing Layout */}
+              {/* Student Project Submission Showcasing Layout — Feature 9 */}
               <section style={styles.contentCard}>
                 <div style={styles.cardHeader}>
                   <span style={{ ...styles.cardIcon, backgroundColor: '#f5f3ff', color: '#8b5cf6' }}>📁</span>
@@ -300,33 +343,65 @@ export default function Dashboard() {
                     <h3 style={styles.cardTitle}>Project Portfolio Showcase</h3>
                     <p style={styles.cardSub}>Highlight your work to stand out to recruiters</p>
                   </div>
+                  <span style={styles.resultsBadge}>{myProjects.length} project{myProjects.length !== 1 ? 's' : ''}</span>
                 </div>
 
-                <form onSubmit={handleAddProject} style={{ ...styles.searchBarRow, gap: '16px', alignItems: 'flex-end', background: 'none', padding: 0, marginTop: '20px' }}>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={styles.fieldLabel}>Project Title <span style={{color:'#ef4444'}}>*</span></label>
-                    <input type="text" placeholder="e.g. E-Commerce Web App" value={projectForm.title} onChange={e => setProjectForm({...projectForm, title: e.target.value})} style={styles.textInput} required />
+                {/* Add / Edit Form */}
+                <form onSubmit={handleAddProject} style={styles.formLayout}>
+                  <div style={{display: 'flex', gap: '16px'}}>
+                    <div style={{...styles.inputGroup, flex: 1}}>
+                      <label style={styles.fieldLabel}>Project Title <span style={{color:'#ef4444'}}>*</span></label>
+                      <input type="text" placeholder="e.g. E-Commerce Web App" value={projectForm.title} onChange={e => setProjectForm({...projectForm, title: e.target.value})} style={styles.textInput} required />
+                    </div>
+                    <div style={{...styles.inputGroup, flex: 1}}>
+                      <label style={styles.fieldLabel}>Tech Stack</label>
+                      <input type="text" placeholder="e.g. React, Node.js, MySQL" value={projectForm.tech_stack} onChange={e => setProjectForm({...projectForm, tech_stack: e.target.value})} style={styles.textInput} />
+                    </div>
                   </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={styles.inputGroup}>
+                    <label style={styles.fieldLabel}>Description</label>
+                    <textarea placeholder="Briefly describe what this project does..." value={projectForm.description} onChange={e => setProjectForm({...projectForm, description: e.target.value})} style={{...styles.textInput, minHeight: '72px', resize: 'vertical'}} />
+                  </div>
+                  <div style={styles.inputGroup}>
                     <label style={styles.fieldLabel}>Live Demo / GitHub URL</label>
                     <input type="text" placeholder="https://github.com/..." value={projectForm.link} onChange={e => setProjectForm({...projectForm, link: e.target.value})} style={styles.textInput} />
                   </div>
-                  <button type="submit" style={{ ...styles.primaryActionBtn, height: '45px' }}>+ Add Project</button>
+                  <div style={{display: 'flex', gap: '10px'}}>
+                    <button type="submit" style={styles.primaryActionBtn}>
+                      {editingProject ? '💾 Save Changes' : '+ Add Project'}
+                    </button>
+                    {editingProject && (
+                      <button type="button" onClick={handleCancelEdit} style={styles.signOutBtn}>Cancel</button>
+                    )}
+                  </div>
                 </form>
 
+                {/* Project List */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '25px' }}>
                   {myProjects.length === 0 ? (
                     <div style={styles.emptyIllustrationState}>
-                      <div style={{...styles.searchLensGraphic, backgroundColor: '#eff6ff', color: '#3b82f6'}}>📁<span style={{fontSize:'12px', position:'absolute', top:0, right:0}}>➕</span></div>
+                      <div style={{...styles.searchLensGraphic, backgroundColor: '#f5f3ff', color: '#8b5cf6'}}>📁<span style={{fontSize:'12px', position:'absolute', top:0, right:0}}>➕</span></div>
                       <h4 style={styles.emptyStateTitle}>No projects added yet.</h4>
                       <p style={styles.emptyStateSub}>Showcase your projects to improve your internship profile and attract recruiters.</p>
                     </div>
                   ) : myProjects.map(p => (
-                    <div key={p.id} style={styles.projectItemBar}>
-                      <span style={{marginRight: '8px'}}>🌟</span>
-                      <strong style={{ color: '#1e293b' }}>{p.title}</strong>
-                      <span style={{margin: '0 8px', color: '#cbd5e1'}}>—</span>
-                      <a href={p.link} target="_blank" rel="noreferrer" style={styles.projectLinkText}>{p.link || 'No Live Verification Link'}</a>
+                    <div key={p.id} style={styles.dataItemRow}>
+                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
+                        <div style={{flex:1}}>
+                          <h4 style={{...styles.itemTitle, color: '#8b5cf6'}}>
+                            🌟 {p.title}
+                            {p.tech_stack && <span style={{...styles.soonBadge, marginLeft:'10px', backgroundColor:'#f5f3ff', color:'#8b5cf6'}}>{p.tech_stack}</span>}
+                          </h4>
+                          {p.description && <p style={styles.itemDescription}>{p.description}</p>}
+                          {p.link && (
+                            <a href={p.link} target="_blank" rel="noreferrer" style={styles.projectLinkText}>🔗 {p.link}</a>
+                          )}
+                        </div>
+                        <div style={{display:'flex', gap:'8px', marginLeft:'16px', flexShrink:0}}>
+                          <button onClick={() => handleEditProject(p)} style={{...styles.signOutBtn, fontSize:'12px', padding:'6px 12px'}}>✏️ Edit</button>
+                          <button onClick={() => handleDeleteProject(p.id)} style={{...styles.signOutBtn, fontSize:'12px', padding:'6px 12px', color:'#b91c1c', borderColor:'#fecaca'}}>🗑️ Delete</button>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -461,6 +536,7 @@ const styles = {
   itemDescription: { fontSize: '14px', color: '#475569', margin: '0 0 12px 0', lineHeight: '1.5' },
   itemMetaLine: { display: 'flex', gap: '10px', fontSize: '12px', color: '#64748b', marginBottom: '14px' },
   applyInlineBtn: { backgroundColor: '#10b981', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' },
+  deadlineClosedBadge: { display: 'inline-block', backgroundColor: '#fee2e2', color: '#b91c1c', fontSize: '12px', fontWeight: '700', padding: '6px 14px', borderRadius: '6px', letterSpacing: '0.2px' },
   
   formLayout: { display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '15px' },
   inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },

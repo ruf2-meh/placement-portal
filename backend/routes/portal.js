@@ -12,8 +12,8 @@ const { Op } = require('sequelize'); // Used for search querying filters
 // POST: Add a student project
 router.post('/projects', async (req, res) => {
     try {
-        const { student_id, title, description, link } = req.body;
-        const project = await Project.create({ student_id, title, description, link });
+        const { student_id, title, description, link, tech_stack } = req.body;
+        const project = await Project.create({ student_id, title, description, link, tech_stack });
         res.status(201).json({ message: "Project added successfully!", project });
     } catch (err) {
         res.status(500).json({ message: "Error adding project." });
@@ -27,6 +27,31 @@ router.get('/projects/:student_id', async (req, res) => {
         res.json(projects);
     } catch (err) {
         res.status(500).json({ message: "Error fetching projects." });
+    }
+});
+
+// PUT: Edit an existing student project
+router.put('/projects/:id', async (req, res) => {
+    try {
+        const { title, description, link, tech_stack } = req.body;
+        const project = await Project.findByPk(req.params.id);
+        if (!project) return res.status(404).json({ message: "Project not found." });
+        await project.update({ title, description, link, tech_stack });
+        res.json({ message: "Project updated successfully!", project });
+    } catch (err) {
+        res.status(500).json({ message: "Error updating project." });
+    }
+});
+
+// DELETE: Remove a student project
+router.delete('/projects/:id', async (req, res) => {
+    try {
+        const project = await Project.findByPk(req.params.id);
+        if (!project) return res.status(404).json({ message: "Project not found." });
+        await project.destroy();
+        res.json({ message: "Project deleted successfully!" });
+    } catch (err) {
+        res.status(500).json({ message: "Error deleting project." });
     }
 });
 

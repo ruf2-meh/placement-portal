@@ -31,8 +31,8 @@ app.use('/api/portal', portalRoutes);
 sequelize.authenticate()
     .then(() => {
         console.log('✅ Local SQLite Database File Connected Successfully!');
-        // force: false ensures it won't delete your data if it restarts
-        return sequelize.sync({ force: false }); 
+        // alter: true safely adds new columns without dropping existing data
+        return sequelize.sync({ alter: true }); 
     })
     .then(() => {
         console.log('📦 All database tables synchronized perfectly!');
