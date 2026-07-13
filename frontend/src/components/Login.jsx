@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -6,6 +6,25 @@ const Login = () => {
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [selectedRole, setSelectedRole] = useState('Student');
     const [error, setError] = useState('');
+    
+    // Dynamic stats object initialized with loading placeholders
+    const [stats, setStats] = useState({
+        studentsPlaced: 'Loading...',
+        partnerCompanies: 'Loading...',
+        placementRate: 'Loading...'
+    });
+
+    // Fetch the live database counters when the view loads
+    useEffect(() => {
+        axios.get('http://localhost:5000/api/portal/stats')
+            .then(res => {
+                setStats(res.data);
+            })
+            .catch(err => {
+                console.error("Could not reach stats API:", err);
+                setStats({ studentsPlaced: '0+', partnerCompanies: '0+', placementRate: '0%' });
+            });
+    }, []);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -15,7 +34,6 @@ const Login = () => {
         e.preventDefault();
         setError('');
         try {
-            // We pass the credentials along with the actively selected role badge
             const res = await axios.post('http://localhost:5000/api/auth/login', {
                 ...formData,
                 role: selectedRole
@@ -35,26 +53,29 @@ const Login = () => {
         <div style={styles.container}>
             {/* Left Decorative Information Panel */}
             <div style={styles.leftPanel}>
-                <div style={styles.logoTopLeft}>🕒 InternSphere</div>
+                {/* BRAND UPDATE */}
+                <div style={styles.logoTopLeft}>🕒 HireHive</div>
                 <div style={styles.heroContent}>
                     <div style={styles.illustrationPlaceholder}>
-                        {/* Clean minimal geometric fallback representing your connected node circles */}
                         <div style={styles.circleGraphic}>I</div>
                     </div>
                     <h1 style={styles.heroTitle}>Launch Your Internship<br />Journey</h1>
                     <p style={styles.heroSubtitle}>Connect students, companies, and faculty through one intelligent internship management platform.</p>
                 </div>
+                
+                {/* DYNAMIC DATABASE STATISTICS BLOCK */}
                 <div style={styles.statsRow}>
-                    <div><strong>2,400+</strong><br/><span style={styles.statLabel}>Students Placed</span></div>
-                    <div><strong>380+</strong><br/><span style={styles.statLabel}>Partner Companies</span></div>
-                    <div><strong>94%</strong><br/><span style={styles.statLabel}>Placement Rate</span></div>
+                    <div><strong>{stats.studentsPlaced}</strong><br/><span style={styles.statLabel}>Students Placed</span></div>
+                    <div><strong>{stats.partnerCompanies}</strong><br/><span style={styles.statLabel}>Partner Companies</span></div>
+                    <div><strong>{stats.placementRate}</strong><br/><span style={styles.statLabel}>Placement Rate</span></div>
                 </div>
             </div>
 
             {/* Right Interactive Form Panel */}
             <div style={styles.rightPanel}>
                 <div style={styles.formCard}>
-                    <div style={styles.brandTitle}>🕒 InternSphere</div>
+                    {/* BRAND UPDATE */}
+                    <div style={styles.brandTitle}>🕒 HireHive</div>
                     <h2 style={styles.welcomeText}>Welcome Back</h2>
                     <p style={styles.subWelcome}>Sign in to continue to your dashboard.</p>
 
@@ -113,14 +134,16 @@ const Login = () => {
                     <p style={styles.footerRedirect}>
                         Don't have an account? <Link to="/register" style={styles.redirectLink}>Register</Link>
                     </p>
-                    <div style={styles.copyrightText}>© 2026 InternSphere. All rights reserved.</div>
+                    
+                    {/* BRAND UPDATE */}
+                    <div style={styles.copyrightText}>© 2026 HireHive. All rights reserved.</div>
                 </div>
             </div>
         </div>
     );
 };
 
-// CSS-in-JS style configurations matching your picture layouts perfectly
+// Style configurations are maintained exactly as they were
 const styles = {
     container: { display: 'flex', minHeight: '100vh', backgroundColor: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
     leftPanel: { flex: 1.1, background: 'linear-gradient(135deg, #1e40af 0%, #0369a1 50%, #0d9488 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '40px', color: '#fff', position: 'relative' },
@@ -135,7 +158,7 @@ const styles = {
     
     rightPanel: { flex: 0.9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', backgroundColor: '#f8fafc' },
     formCard: { width: '100%', maxWidth: '420px' },
-    brandTitle: { fontSize: '20px', fontWeight: 'bold', color: '#1e3a8a', marginBottom: '24px', display: 'none' }, // hidden to match view
+    brandTitle: { fontSize: '20px', fontWeight: 'bold', color: '#1e3a8a', marginBottom: '24px', display: 'none' },
     welcomeText: { fontSize: '28px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' },
     subWelcome: { fontSize: '14px', color: '#64748b', marginBottom: '24px' },
     errorAlert: { padding: '12px', backgroundColor: '#fee2e2', color: '#ef4444', borderRadius: '6px', fontSize: '14px', marginBottom: '15px', border: '1px solid #fca5a5' },
