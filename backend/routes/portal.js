@@ -1,32 +1,71 @@
 const express = require('express');
 const router = express.Router();
+
 const Job = require('../models/Job');
 const Project = require('../models/Project');
 const Application = require('../models/Application');
 const Notification = require('../models/Notification');
-const { Op } = require('sequelize'); // Used for search querying filters
+
+const { Op } = require('sequelize');
 
 // =========================================================================
 // FEATURE 9: Student Project Showcase Profile
 // =========================================================================
+
 // POST: Add a student project
 router.post('/projects', async (req, res) => {
     try {
+ HEAD
         const { student_id, title, description, link, tech_stack } = req.body;
         const project = await Project.create({ student_id, title, description, link, tech_stack });
         res.status(201).json({ message: "Project added successfully!", project });
+
+        const { student_id, title, description, link } = req.body;
+
+        if (!student_id || !title) {
+            return res.status(400).json({
+                message: 'Student ID and project title are required.'
+            });
+        }
+
+        const project = await Project.create({
+            student_id,
+            title,
+            description,
+            link
+        });
+
+        res.status(201).json({
+            message: 'Project added successfully!',
+            project
+        });
+ d93f03c97b96c33cfd5b9f2fbaa7b4689d23fc90
     } catch (err) {
-        res.status(500).json({ message: "Error adding project." });
+        console.error('Error adding project:', err);
+
+        res.status(500).json({
+            message: 'Error adding project.'
+        });
     }
 });
 
 // GET: Get a specific student's projects
 router.get('/projects/:student_id', async (req, res) => {
     try {
-        const projects = await Project.findAll({ where: { student_id: req.params.student_id } });
-        res.json(projects);
+        const projects = await Project.findAll({
+            where: {
+                student_id: req.params.student_id
+            },
+            order: [['createdAt', 'DESC']]
+        });
+
+        res.status(200).json(projects);
     } catch (err) {
-        res.status(500).json({ message: "Error fetching projects." });
+        console.error('Error fetching projects:', err);
+
+        res.status(500).json({
+            message: 'Error fetching projects.'
+        });
     }
 });
 
@@ -56,102 +95,273 @@ router.delete('/projects/:id', async (req, res) => {
 });
 
 // =========================================================================
-// FEATURE 4 & 6: Job Board Search, Filters & Deadline Validation Check
+// FEATURE 4 & 6: Job Search, Filter and Deadline Validation
 // =========================================================================
+
+// GET: Search jobs by title or location
 router.get('/jobs/search', async (req, res) => {
     try {
         const { keyword } = req.query;
-        let queryOptions = {};
 
-        // If a keyword search string is provided, filter by title or location
-        if (keyword) {
+        const queryOptions = {
+            order: [['createdAt', 'DESC']]
+        };
+
+        if (keyword && keyword.trim()) {
             queryOptions.where = {
                 [Op.or]: [
-                    { title: { [Op.like]: `%${keyword}%` } },
-                    { location: { [Op.like]: `%${keyword}%` } }
+                    {
+                        title: {
+                            [Op.like]: `%${keyword.trim()}%`
+                        }
+                    },
+                    {
+                        location: {
+                            [Op.like]: `%${keyword.trim()}%`
+                        }
+                    }
                 ]
             };
         }
 
         const jobs = await Job.findAll(queryOptions);
-        res.json(jobs);
+
+        res.status(200).json(jobs);
     } catch (err) {
-        res.status(500).json({ message: "Error searching jobs." });
+        console.error('Error searching jobs:', err);
+
+        res.status(500).json({
+            message: 'Error searching jobs.'
+        });
     }
 });
 
 // =========================================================================
-// FEATURE 10, 6, & 23: Apply Engine + Deadline Protection + Alert Triggering
+// FEATURE 10, 6 & 23:
+// Apply Job + Deadline Protection + Notification System
 // =========================================================================
+
 router.post('/jobs/apply', async (req, res) => {
     try {
         const { job_id, student_id } = req.body;
 
-        // Find the job details
+        if (!job_id || !student_id) {
+            return res.status(400).json({
+                message: 'Job ID and student ID are required.'
+            });
+        }
+
+        // Find the selected job
         const job = await Job.findByPk(job_id);
-        if (!job) return res.status(404).json({ message: "Job not found." });
 
-        // FEATURE 6: Deadline enforcement validation check
-        const today = new Date().toISOString().split('T')[0];
-        if (job.deadline < today) {
-            return res.status(400).json({ message: "Application failed: The deadline for this job posting has passed." });
+        if (!job) {
+            return res.status(404).json({
+                message: 'Job not found.'
+            });
         }
 
-        // Check if student already applied
-        const existingApp = await Application.findOne({ where: { job_id, student_id } });
-        if (existingApp) {
-            return res.status(400).json({ message: "You have already applied to this position." });
+        // FEATURE 6: Check application deadline
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const deadline = new Date(job.deadline);
+        deadline.setHours(23, 59, 59, 999);
+
+        if (Number.isNaN(deadline.getTime())) {
+            return res.status(400).json({
+                message: 'This job has an invalid application deadline.'
+            });
         }
 
-        // Register application record
-        await Application.create({ job_id, student_id });
+        if (deadline < today) {
+            return res.status(400).json({
+                message:
+                    'Application failed: The deadline for this job posting has passed.'
+            });
+        }
 
-        // FEATURE 23: Alert System (Notify the company recruiter)
+        // Check whether the student has already applied
+        const existingApplication = await Application.findOne({
+            where: {
+                job_id,
+                student_id
+            }
+        });
+
+        if (existingApplication) {
+            return res.status(400).json({
+                message: 'You have already applied to this position.'
+            });
+        }
+
+        // Create the application
+        const application = await Application.create({
+            job_id,
+            student_id
+        });
+
+        // FEATURE 23: Notify the company
         await Notification.create({
             user_id: job.company_id,
-            message: `🎉 You have received a new applicant submission for your position: "${job.title}"!`
+            message: `A student has applied for your job: "${job.title}".`
         });
 
-        // Notify the student confirming submission
+        // FEATURE 23: Notify the student
         await Notification.create({
             user_id: student_id,
-            message: `✅ Your application for "${job.title}" has been transmitted successfully.`
+            message: `Your application for "${job.title}" was submitted successfully.`
         });
 
-        res.status(201).json({ message: "Application submitted successfully!" });
+        res.status(201).json({
+            message: 'Application submitted successfully!',
+            application
+        });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Error processing application." });
+        console.error('Error processing application:', err);
+
+        res.status(500).json({
+            message: 'Error processing application.'
+        });
     }
 });
 
 // =========================================================================
-// FEATURE 23: Pull Notification Dashboard Feeds
+// FEATURE 23: Notification Dashboard
 // =========================================================================
+
+// GET: Get all notifications for a specific user
 router.get('/notifications/:user_id', async (req, res) => {
     try {
-        const alerts = await Notification.findAll({
-            where: { user_id: req.params.user_id },
+        const notifications = await Notification.findAll({
+            where: {
+                user_id: req.params.user_id
+            },
             order: [['createdAt', 'DESC']]
         });
-        res.json(alerts);
+
+        res.status(200).json(notifications);
     } catch (err) {
-        res.status(500).json({ message: "Error fetching alerts." });
+        console.error('Error fetching notifications:', err);
+
+        res.status(500).json({
+            message: 'Error fetching notifications.'
+        });
     }
 });
+
+// GET: Get unread notification count
+router.get('/notifications/:user_id/unread-count', async (req, res) => {
+    try {
+        const unreadCount = await Notification.count({
+            where: {
+                user_id: req.params.user_id,
+                is_read: false
+            }
+        });
+
+        res.status(200).json({
+            unreadCount
+        });
+    } catch (err) {
+        console.error(
+            'Error fetching unread notification count:',
+            err
+        );
+
+        res.status(500).json({
+            message: 'Error fetching unread notification count.'
+        });
+    }
+});
+
+// PATCH: Mark a single notification as read
+router.patch('/notifications/:notification_id/read', async (req, res) => {
+    try {
+        const { user_id } = req.body;
+
+        if (!user_id) {
+            return res.status(400).json({
+                message: 'User ID is required.'
+            });
+        }
+
+        const notification = await Notification.findOne({
+            where: {
+                id: req.params.notification_id,
+                user_id
+            }
+        });
+
+        if (!notification) {
+            return res.status(404).json({
+                message: 'Notification not found.'
+            });
+        }
+
+        notification.is_read = true;
+        await notification.save();
+
+        res.status(200).json({
+            message: 'Notification marked as read.',
+            notification
+        });
+    } catch (err) {
+        console.error('Error updating notification:', err);
+
+        res.status(500).json({
+            message: 'Error updating notification.'
+        });
+    }
+});
+
+// PATCH: Mark all notifications as read
+router.patch('/notifications/:user_id/read-all', async (req, res) => {
+    try {
+        const [updatedCount] = await Notification.update(
+            {
+                is_read: true
+            },
+            {
+                where: {
+                    user_id: req.params.user_id,
+                    is_read: false
+                }
+            }
+        );
+
+        res.status(200).json({
+            message: 'All notifications marked as read.',
+            updatedCount
+        });
+    } catch (err) {
+        console.error('Error updating notifications:', err);
+
+        res.status(500).json({
+            message: 'Error updating notifications.'
+        });
+    }
+});
+
 // =========================================================================
 // FEATURE: Get Company's Specific Job Listings
 // =========================================================================
+
 router.get('/jobs/company/:company_id', async (req, res) => {
     try {
         const companyJobs = await Job.findAll({
-            where: { company_id: req.params.company_id },
-            order: [['createdAt', 'DESC']] // Shows newest postings first
+            where: {
+                company_id: req.params.company_id
+            },
+            order: [['createdAt', 'DESC']]
         });
-        res.json(companyJobs);
+
+        res.status(200).json(companyJobs);
     } catch (err) {
-        console.error("Error fetching company jobs: ", err);
-        res.status(500).json({ message: "Error fetching company job listings." });
+        console.error('Error fetching company jobs:', err);
+
+        res.status(500).json({
+            message: 'Error fetching company job listings.'
+        });
     }
 });
 // =========================================================================

@@ -1,0 +1,134 @@
+.notification-wrapper {
+    position: relative;
+}
+
+.notification-bell {
+    position: relative;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+}
+
+.notification-bell:hover {
+    background: #f1f5f9;
+}
+
+.bell-icon {
+    font-size: 22px;
+}
+
+.notification-badge {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 3px;
+    border-radius: 10px;
+    background: #dc2626;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-dropdown {
+    position: absolute;
+    top: 48px;
+    right: 0;
+    width: 360px;
+    max-height: 430px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.15);
+    overflow: hidden;
+    z-index: 1000;
+}
+
+.notification-header {
+    padding: 16px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notification-header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.mark-all-button {
+    border: none;
+    background: transparent;
+    color: #2563eb;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.notification-list {
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 14px 16px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.notification-item.unread {
+    background: #eff6ff;
+}
+
+.notification-item.read {
+    background: white;
+}
+
+.notification-item:hover {
+    background: #f8fafc;
+}
+
+.notification-message {
+    color: #1e293b;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.notification-item.unread .notification-message {
+    font-weight: 600;
+}
+
+.notification-time {
+    color: #64748b;
+    font-size: 11px;
+}
+
+.notification-status {
+    margin: 0;
+    padding: 30px 16px;
+    text-align: center;
+    color: #64748b;
+    font-size: 14px;
+}
+
+@media (max-width: 480px) {
+    .notification-dropdown {
+        position: fixed;
+        top: 65px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+    }
+}

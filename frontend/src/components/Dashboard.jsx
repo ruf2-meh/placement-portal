@@ -5,6 +5,7 @@ export default function Dashboard() {
   const user = JSON.parse(localStorage.getItem('user')) || { id: 1, name: "Rufaida Mehzabin", role: "Student" };
   
   const [notifications, setNotifications] = useState([]);
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const [jobs, setJobs] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [projectForm, setProjectForm] = useState({ title: '', description: '', link: '', tech_stack: '' });
@@ -15,6 +16,7 @@ export default function Dashboard() {
   const [jobForm, setJobForm] = useState({ title: '', description: '', requirements: '', location: '', deadline: '' });
   const [myJobs, setMyJobs] = useState([]);
 
+ 
   // --- Feature 6: Deadline helper ---
   const isDeadlinePassed = (deadline) => {
     if (!deadline) return false;
@@ -22,6 +24,8 @@ export default function Dashboard() {
     return deadline < today;
   };
 
+  const unreadCount = notifications.filter((notification) => !notification.is_read).length;
+ 
   useEffect(() => {
     fetchNotifications();
     if (user.role === 'Student') {
@@ -36,7 +40,70 @@ export default function Dashboard() {
     try {
       const res = await axios.get(`http://localhost:5000/api/portal/notifications/${user.id}`);
       setNotifications(res.data);
-    } catch (err) { console.error("Error pulling notifications"); }
+    } catch (err) {
+      console.error("Error pulling notifications", err);
+    }
+  };
+
+  const handleBellClick = () => {
+    setNotificationOpen((current) => !current);
+    fetchNotifications();
+  };
+
+  const markNotificationAsRead = async (notificationId) => {
+    const selectedNotification = notifications.find(
+      (notification) => notification.id === notificationId
+    );
+
+    if (!selectedNotification || selectedNotification.is_read) {
+      return;
+    }
+
+    try {
+      await axios.patch(
+        `http://localhost:5000/api/portal/notifications/${notificationId}/read`,
+        { user_id: user.id }
+      );
+
+      setNotifications((currentNotifications) =>
+        currentNotifications.map((notification) =>
+          notification.id === notificationId
+            ? { ...notification, is_read: true }
+            : notification
+        )
+      );
+    } catch (err) {
+      console.error("Error marking notification as read", err);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    if (unreadCount === 0) {
+      return;
+    }
+
+    try {
+      await axios.patch(
+        `http://localhost:5000/api/portal/notifications/${user.id}/read-all`
+      );
+
+      setNotifications((currentNotifications) =>
+        currentNotifications.map((notification) => ({
+          ...notification,
+          is_read: true
+        }))
+      );
+    } catch (err) {
+      console.error("Error marking all notifications as read", err);
+    }
+  };
+
+  const formatNotificationTime = (createdAt) => {
+    if (!createdAt) {
+      return '';
+    }
+
+    return new Date(createdAt).toLocaleString();
   };
 
   const fetchJobs = async (keyword = '') => {
@@ -134,14 +201,80 @@ export default function Dashboard() {
       <nav style={styles.navbar}>
         <div style={styles.navLeft}>
           <div style={styles.logoBadge}>🕒</div>
-          <span style={styles.logoText}>InternSphere</span>
+          <span style={styles.logoText}>HireHive</span>
           <div style={styles.divider}>|</div>
           <span style={styles.breadcrumbLink}>Dashboard</span>
           <span style={styles.breadcrumbArrow}>&gt;</span>
           <span style={styles.breadcrumbActive}>{user.role}</span>
         </div>
         <div style={styles.navRight}>
-          <div style={styles.notificationBell}>🔔<span style={styles.bellDot}></span></div>
+          <div style={styles.notificationWrapper}>
+            <button
+              type="button"
+              onClick={handleBellClick}
+              style={styles.notificationBellButton}
+              aria-label="Open notifications"
+            >
+              🔔
+              {unreadCount > 0 && (
+                <span style={styles.notificationBadge}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {notificationOpen && (
+              <div style={styles.notificationDropdown}>
+                <div style={styles.notificationDropdownHeader}>
+                  <div>
+                    <h4 style={styles.notificationDropdownTitle}>Notifications</h4>
+                    <span style={styles.notificationDropdownSubtitle}>
+                      {unreadCount} unread
+                    </span>
+                  </div>
+
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={markAllNotificationsAsRead}
+                      style={styles.markAllButton}
+                    >
+                      Mark all as read
+                    </button>
+                  )}
+                </div>
+
+                <div style={styles.notificationDropdownList}>
+                  {notifications.length === 0 ? (
+                    <p style={styles.notificationEmptyText}>
+                      No notifications yet.
+                    </p>
+                  ) : (
+                    notifications.slice(0, 6).map((notification) => (
+                      <button
+                        type="button"
+                        key={notification.id}
+                        onClick={() => markNotificationAsRead(notification.id)}
+                        style={{
+                          ...styles.notificationDropdownItem,
+                          ...(notification.is_read
+                            ? styles.notificationDropdownItemRead
+                            : styles.notificationDropdownItemUnread)
+                        }}
+                      >
+                        <span style={styles.notificationMessage}>
+                          {notification.message}
+                        </span>
+                        <span style={styles.notificationTime}>
+                          {formatNotificationTime(notification.createdAt)}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           <div style={styles.userAvatar}>{user.name ? user.name.split(' ').map(n => n[0]).join('') : 'U'}</div>
           <div style={styles.userInfo}>
             <span style={styles.userName}>{user.name}</span>
@@ -436,21 +569,58 @@ export default function Dashboard() {
           <section style={styles.contentCard}>
             <div style={{ ...styles.cardHeader, borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', marginBottom: '16px' }}>
               <span style={{ ...styles.cardIcon, backgroundColor: '#eff6ff', color: '#2563eb' }}>🔔</span>
-              <h3 style={{ ...styles.cardTitle, margin: 0 }}>Alerts Feed</h3>
-              <button onClick={fetchNotifications} style={styles.syncRefreshBtn}>🔄</button>
+              <div>
+                <h3 style={{ ...styles.cardTitle, margin: 0 }}>Alerts Feed</h3>
+                <span style={styles.alertUnreadText}>{unreadCount} unread</span>
+              </div>
+
+              <div style={styles.alertHeaderActions}>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={markAllNotificationsAsRead}
+                    style={styles.markAllButton}
+                  >
+                    Mark all read
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={fetchNotifications}
+                  style={styles.syncRefreshBtn}
+                  aria-label="Refresh notifications"
+                >
+                  🔄
+                </button>
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '350px', overflowY: 'auto' }}>
               {notifications.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '30px 10px' }}>
                   <div style={styles.bellEmptyIcon}>🔔</div>
-                  <h5 style={{ margin: '10px 0 4px 0', fontSize: '14px', color: '#1e293b' }}>No new notifications</h5>
+                  <h5 style={{ margin: '10px 0 4px 0', fontSize: '14px', color: '#1e293b' }}>No notifications</h5>
                   <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.4' }}>We'll notify you about applications, interviews, and deadlines.</p>
                 </div>
-              ) : notifications.map(notif => (
-                <div key={notif.id} style={styles.notificationBubble}>
-                  {notif.message}
-                </div>
+              ) : notifications.map((notification) => (
+                <button
+                  type="button"
+                  key={notification.id}
+                  onClick={() => markNotificationAsRead(notification.id)}
+                  style={{
+                    ...styles.notificationBubble,
+                    ...(notification.is_read
+                      ? styles.notificationBubbleRead
+                      : styles.notificationBubbleUnread)
+                  }}
+                >
+                  <span style={styles.notificationMessage}>
+                    {notification.message}
+                  </span>
+                  <span style={styles.notificationTime}>
+                    {formatNotificationTime(notification.createdAt)}
+                  </span>
+                </button>
               ))}
             </div>
           </section>
@@ -486,8 +656,18 @@ const styles = {
   breadcrumbArrow: { fontSize: '12px', color: '#94a3b8' },
   breadcrumbActive: { fontSize: '14px', color: '#2563eb', fontWeight: '600', textTransform: 'capitalize' },
   navRight: { display: 'flex', alignItems: 'center', gap: '16px' },
-  notificationBell: { fontSize: '18px', cursor: 'pointer', position: 'relative', color: '#64748b' },
-  bellDot: { position: 'absolute', top: '2px', right: '2px', width: '6px', height: '6px', backgroundColor: '#ef4444', borderRadius: '50%' },
+  notificationWrapper: { position: 'relative' },
+  notificationBellButton: { width: '38px', height: '38px', border: '1px solid #e2e8f0', borderRadius: '10px', backgroundColor: '#ffffff', cursor: 'pointer', position: 'relative', color: '#64748b', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  notificationBadge: { position: 'absolute', top: '-5px', right: '-5px', minWidth: '18px', height: '18px', padding: '0 4px', boxSizing: 'border-box', backgroundColor: '#ef4444', color: '#ffffff', borderRadius: '20px', border: '2px solid #ffffff', fontSize: '10px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  notificationDropdown: { position: 'absolute', top: '48px', right: 0, width: '360px', maxHeight: '430px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', boxShadow: '0 20px 45px rgba(15,23,42,0.18)', overflow: 'hidden', zIndex: 1000 },
+  notificationDropdownHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderBottom: '1px solid #e2e8f0' },
+  notificationDropdownTitle: { margin: 0, fontSize: '15px', color: '#0f172a' },
+  notificationDropdownSubtitle: { display: 'block', marginTop: '3px', fontSize: '11px', color: '#64748b' },
+  notificationDropdownList: { maxHeight: '340px', overflowY: 'auto' },
+  notificationDropdownItem: { width: '100%', border: 'none', borderBottom: '1px solid #f1f5f9', padding: '14px 16px', textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '6px' },
+  notificationDropdownItemUnread: { backgroundColor: '#eff6ff' },
+  notificationDropdownItemRead: { backgroundColor: '#ffffff' },
+  notificationEmptyText: { margin: 0, padding: '30px 16px', textAlign: 'center', color: '#64748b', fontSize: '13px' },
   userAvatar: { width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#0ea5e9', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '13px' },
   userInfo: { display: 'flex', flexDirection: 'column' },
   userName: { fontSize: '14px', fontWeight: '600', color: '#0f172a' },
@@ -552,9 +732,16 @@ const styles = {
   miniSub: { fontSize: '12px', color: '#64748b', margin: 0, lineHeight: '1.4' },
   soonBadge: { backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '10px', fontWeight: '700', padding: '3px 8px', borderRadius: '4px', letterSpacing: '0.5px' },
   
-  syncRefreshBtn: { position: 'absolute', right: 0, top: 0, background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '16px' },
+  alertUnreadText: { display: 'block', marginTop: '3px', fontSize: '11px', color: '#64748b' },
+  alertHeaderActions: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' },
+  markAllButton: { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '11px', fontWeight: '600', padding: '4px' },
+  syncRefreshBtn: { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '16px', padding: '4px' },
   bellEmptyIcon: { fontSize: '28px', color: '#cbd5e1' },
-  notificationBubble: { padding: '12px 14px', backgroundColor: '#f8fafc', borderRadius: '10px', borderLeft: '4px solid #2563eb', fontSize: '13px', lineHeight: '1.4', color: '#334155', borderTop: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' },
+  notificationBubble: { width: '100%', padding: '12px 14px', borderRadius: '10px', borderLeft: '4px solid #2563eb', borderTop: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '13px', lineHeight: '1.4', color: '#334155', textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '6px' },
+  notificationBubbleUnread: { backgroundColor: '#eff6ff', fontWeight: '600' },
+  notificationBubbleRead: { backgroundColor: '#ffffff', fontWeight: '400', opacity: 0.82 },
+  notificationMessage: { color: '#334155', fontSize: '13px', lineHeight: '1.4' },
+  notificationTime: { color: '#94a3b8', fontSize: '10px', fontWeight: '400' },
   
   sidebarSoonUtilityCard: { backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' },
   utilLeft: { display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#0f172a' },

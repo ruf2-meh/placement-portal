@@ -36,7 +36,7 @@ const Register = () => {
             <div style={styles.leftPanel}>
                 <div style={styles.logoTopLeft}>
                     <div style={styles.logoBadge}>🕒</div>
-                    <span style={styles.logoText}>InternSphere</span>
+                    <span style={styles.logoText}>HireHive</span>
                 </div>
                 
                 <div style={styles.heroContent}>
@@ -64,7 +64,7 @@ const Register = () => {
                 <div style={styles.formCard}>
                     <div style={styles.formHeaderBrand}>
                         <div style={{...styles.logoBadge, backgroundColor:'#2563eb'}}>🕒</div>
-                        <span style={{fontSize:'15px', fontWeight:'700', color:'#0f172a'}}>InternSphere</span>
+                        <span style={{fontSize:'15px', fontWeight:'700', color:'#0f172a'}}>HireHive</span>
                     </div>
 
                     <h2 style={styles.welcomeText}>Create Account</h2>
@@ -120,7 +120,7 @@ const Register = () => {
                         Already have an account? <Link to="/login" style={styles.redirectLink}>Register</Link>
                     </p>
                     
-                    <div style={styles.subCopyright}>© 2026 InternSphere. All rights reserved.</div>
+                    <div style={styles.subCopyright}>© 2026 HireHive. All rights reserved.</div>
                 </div>
             </div>
         </div>
