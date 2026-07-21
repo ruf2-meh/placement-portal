@@ -15,10 +15,12 @@ const { Op } = require('sequelize');
 // POST: Add a student project
 router.post('/projects', async (req, res) => {
     try {
- HEAD
+
+ 
         const { student_id, title, description, link, tech_stack } = req.body;
         const project = await Project.create({ student_id, title, description, link, tech_stack });
         res.status(201).json({ message: "Project added successfully!", project });
+
 
         const { student_id, title, description, link } = req.body;
 
@@ -39,7 +41,8 @@ router.post('/projects', async (req, res) => {
             message: 'Project added successfully!',
             project
         });
- d93f03c97b96c33cfd5b9f2fbaa7b4689d23fc90
+
+
     } catch (err) {
         console.error('Error adding project:', err);
 
@@ -66,6 +69,7 @@ router.get('/projects/:student_id', async (req, res) => {
         res.status(500).json({
             message: 'Error fetching projects.'
         });
+
     }
 });
 
@@ -91,6 +95,7 @@ router.delete('/projects/:id', async (req, res) => {
         res.json({ message: "Project deleted successfully!" });
     } catch (err) {
         res.status(500).json({ message: "Error deleting project." });
+
     }
 });
 
@@ -362,6 +367,7 @@ router.get('/jobs/company/:company_id', async (req, res) => {
         res.status(500).json({
             message: 'Error fetching company job listings.'
         });
+
     }
 });
 // =========================================================================
@@ -394,6 +400,7 @@ router.get('/stats', async (req, res) => {
             partnerCompanies: "0+",
             placementRate: "0%"
         });
+
     }
 });
 

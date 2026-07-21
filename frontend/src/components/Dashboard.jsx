@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [jobForm, setJobForm] = useState({ title: '', description: '', requirements: '', location: '', deadline: '' });
   const [myJobs, setMyJobs] = useState([]);
 
+
  
   // --- Feature 6: Deadline helper ---
   const isDeadlinePassed = (deadline) => {
@@ -26,6 +27,10 @@ export default function Dashboard() {
 
   const unreadCount = notifications.filter((notification) => !notification.is_read).length;
  
+
+  const unreadCount = notifications.filter((notification) => !notification.is_read).length;
+
+
   useEffect(() => {
     fetchNotifications();
     if (user.role === 'Student') {
