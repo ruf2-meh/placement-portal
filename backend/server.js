@@ -8,6 +8,8 @@ const Job = require('./models/Job');
 const Project = require('./models/Project');
 const Application = require('./models/Application');
 const Notification = require('./models/Notification');
+const StudentProfile = require('./models/StudentProfile'); // Fixed path (single dot)
+const profileRoutes = require('./routes/profile');
 
 // --- Routes ---
 const jobRoutes = require('./routes/jobs');
@@ -26,6 +28,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', require('./routes/auth.js'));
 app.use('/api/jobs', jobRoutes);
 app.use('/api/portal', portalRoutes);
+app.use('/api/profile', profileRoutes);
 
 // Test connection and sync tables
 sequelize.authenticate()

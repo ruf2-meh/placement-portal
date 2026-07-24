@@ -23,6 +23,22 @@ const Job = sequelize.define('Job', {
     deadline: {
         type: DataTypes.DATEONLY,
         allowNull: false
+    },
+    // --- ADDED ELIGIBILITY FIELDS ---
+    min_cgpa: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+        defaultValue: null
+    },
+    max_backlogs: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: null
+    },
+    allowed_departments: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null
     }
 });
 
