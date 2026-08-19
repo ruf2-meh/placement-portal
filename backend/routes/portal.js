@@ -4,6 +4,7 @@ const Job = require('../models/Job');
 const Project = require('../models/Project');
 const Application = require('../models/Application');
 const Notification = require('../models/Notification');
+const Resume = require('../models/Resume');
 const { Op } = require('sequelize'); // Used for search querying filters
 
 // =========================================================================
@@ -152,6 +153,59 @@ router.get('/jobs/company/:company_id', async (req, res) => {
     } catch (err) {
         console.error("Error fetching company jobs: ", err);
         res.status(500).json({ message: "Error fetching company job listings." });
+    }
+});
+
+// =========================================================================
+// FEATURE 7 & 8: Resume Builder — Save & Fetch Resume
+// =========================================================================
+// POST: Create or update a student's resume (upsert by student_id)
+router.post('/resume', async (req, res) => {
+    try {
+        const { student_id, full_name, email, phone, summary, education, experience, skills, links, include_projects } = req.body;
+        const [resume, created] = await Resume.findOrCreate({
+            where: { student_id },
+            defaults: {
+                full_name, email, phone, summary,
+                education: JSON.stringify(education),
+                experience: JSON.stringify(experience),
+                skills: JSON.stringify(skills),
+                links: JSON.stringify(links),
+                include_projects
+            }
+        });
+        if (!created) {
+            await resume.update({
+                full_name, email, phone, summary,
+                education: JSON.stringify(education),
+                experience: JSON.stringify(experience),
+                skills: JSON.stringify(skills),
+                links: JSON.stringify(links),
+                include_projects
+            });
+        }
+        res.status(200).json({ message: "Resume saved successfully!", resume });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Error saving resume." });
+    }
+});
+
+// GET: Fetch a student's resume
+router.get('/resume/:student_id', async (req, res) => {
+    try {
+        const resume = await Resume.findOne({ where: { student_id: req.params.student_id } });
+        if (!resume) return res.status(404).json({ message: "No resume found for this student." });
+        res.json({
+            ...resume.toJSON(),
+            education: JSON.parse(resume.education || '[]'),
+            experience: JSON.parse(resume.experience || '[]'),
+            skills: JSON.parse(resume.skills || '[]'),
+            links: JSON.parse(resume.links || '{}')
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Error fetching resume." });
     }
 });
 

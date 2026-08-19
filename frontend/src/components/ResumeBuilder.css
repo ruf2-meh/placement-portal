@@ -1,0 +1,485 @@
+/* ============================================================
+   ResumeBuilder.css – Feature 7 & 8
+   Scoped to ResumeBuilder.jsx only. Uses the same color tokens
+   and spacing conventions as Dashboard.jsx inline-styles.
+   ============================================================ */
+
+/* ── Page wrapper ── */
+.rb-page {
+  min-height: 100vh;
+  background: #f8fafc;
+  color: #1e293b;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  padding-bottom: 80px;
+}
+
+/* ── Navbar ── */
+.rb-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  padding: 14px 40px;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.rb-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rb-logo-badge {
+  background: #2563eb;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+}
+.rb-logo-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.rb-nav-divider { color: #cbd5e1; margin: 0 4px; }
+.rb-breadcrumb   { font-size: 14px; color: #64748b; }
+.rb-breadcrumb-arrow { font-size: 12px; color: #94a3b8; }
+.rb-breadcrumb-active { font-size: 14px; color: #2563eb; font-weight: 600; }
+.rb-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.rb-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.rb-back-btn:hover { background: #f1f5f9; }
+
+/* ── Hero strip ── */
+.rb-hero {
+  background: linear-gradient(135deg, #1e40af 0%, #0284c7 60%, #0d9488 100%);
+  margin: 30px 40px;
+  border-radius: 20px;
+  padding: 36px 40px;
+  color: #fff;
+  box-shadow: 0 10px 25px -5px rgba(30, 64, 175, 0.15);
+}
+.rb-hero-pill {
+  display: inline-block;
+  background: rgba(255,255,255,0.15);
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  backdrop-filter: blur(4px);
+}
+.rb-hero-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  letter-spacing: -0.5px;
+}
+.rb-hero-sub {
+  font-size: 14px;
+  color: rgba(255,255,255,0.85);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Main two-column layout ── */
+.rb-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin: 0 40px;
+}
+
+/* ── Shared card ── */
+.rb-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 28px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01);
+}
+.rb-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 16px;
+}
+.rb-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.rb-card-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 2px;
+}
+.rb-card-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ── Form elements ── */
+.rb-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin: 24px 0 10px;
+}
+.rb-form-row {
+  display: flex;
+  gap: 14px;
+}
+.rb-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  margin-bottom: 14px;
+}
+.rb-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #344155;
+}
+.rb-input,
+.rb-textarea {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.rb-input:focus,
+.rb-textarea:focus {
+  border-color: #2563eb;
+}
+.rb-textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+/* ── Repeatable entry rows ── */
+.rb-entry-block {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  position: relative;
+}
+.rb-entry-remove {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #fee2e2;
+  border: none;
+  color: #dc2626;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+.rb-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+}
+.rb-add-btn:hover { background: #dbeafe; }
+
+/* ── Skills tags ── */
+.rb-skills-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.rb-skill-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #2563eb;
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.rb-skill-tag-remove {
+  background: none;
+  border: none;
+  color: #93c5fd;
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+}
+.rb-skill-tag-remove:hover { color: #dc2626; }
+
+/* ── Checkbox row ── */
+.rb-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+}
+.rb-checkbox-row input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+/* ── Action buttons ── */
+.rb-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+.rb-save-btn {
+  flex: 1;
+  padding: 12px 24px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  transition: background 0.2s;
+}
+.rb-save-btn:hover { background: #1d4ed8; }
+.rb-save-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+.rb-pdf-btn {
+  padding: 12px 20px;
+  background: #10b981;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  transition: background 0.2s;
+}
+.rb-pdf-btn:hover { background: #059669; }
+
+/* ── Status message ── */
+.rb-status {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rb-status-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.rb-status-error   { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+/* ════════════════════════════════════════════════
+   RESUME PREVIEW  (right column — also the
+   print target for Feature 8)
+   ════════════════════════════════════════════════ */
+
+.rb-preview-panel {
+  position: sticky;
+  top: 20px;
+}
+
+/* The element that gets printed */
+#resume-print-area {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #111;
+  background: #fff;
+  padding: 32px 36px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.rp-header { border-bottom: 2px solid #2563eb; padding-bottom: 14px; margin-bottom: 18px; }
+.rp-name   { font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 4px; }
+.rp-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  color: #475569;
+  margin-top: 6px;
+}
+.rp-contact span { display: flex; align-items: center; gap: 4px; }
+.rp-contact a { color: #2563eb; text-decoration: none; }
+
+.rp-section { margin-bottom: 18px; }
+.rp-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #2563eb;
+  border-bottom: 1px solid #bfdbfe;
+  padding-bottom: 4px;
+  margin-bottom: 10px;
+}
+.rp-summary-text { font-size: 13px; color: #334155; line-height: 1.6; margin: 0; }
+
+.rp-entry { margin-bottom: 12px; }
+.rp-entry-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.rp-entry-name { font-weight: 700; font-size: 14px; color: #0f172a; }
+.rp-entry-dates { font-size: 11px; color: #64748b; white-space: nowrap; }
+.rp-entry-sub  { font-size: 12px; color: #475569; margin: 2px 0 4px; font-style: italic; }
+.rp-entry-desc { font-size: 12px; color: #334155; margin: 0; line-height: 1.5; }
+
+.rp-skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rp-skill-chip {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  border-radius: 14px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.rp-project { margin-bottom: 10px; }
+.rp-project-title { font-weight: 700; font-size: 13px; color: #0f172a; }
+.rp-project-link { font-size: 11px; color: #2563eb; }
+.rp-project-link a { color: #2563eb; text-decoration: none; }
+.rp-project-desc { font-size: 12px; color: #334155; margin: 3px 0 0; line-height: 1.5; }
+
+/* ════════════════════════════════════════════════
+   @media print — Feature 8
+   Hides everything except #resume-print-area
+   ════════════════════════════════════════════════ */
+
+@media print {
+  /* Reset body/html */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 12pt !important;
+  }
+
+  /* Hide everything on the page by default */
+  body > *,
+  .rb-page > * {
+    display: none !important;
+  }
+
+  /* Then show ONLY the resume layout area */
+  .rb-layout {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide the form column */
+  .rb-layout > *:first-child {
+    display: none !important;
+  }
+
+  /* Show the preview column */
+  .rb-layout > *:last-child {
+    display: block !important;
+  }
+
+  /* Full-page resume */
+  #resume-print-area {
+    all: unset !important;
+    display: block !important;
+    font-family: 'Georgia', 'Times New Roman', serif !important;
+    font-size: 11pt !important;
+    line-height: 1.55 !important;
+    color: #000 !important;
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0.5in 0.75in !important;
+    width: auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    page-break-inside: auto;
+  }
+
+  /* Name stays large */
+  .rp-name { font-size: 20pt !important; }
+
+  /* Sections don't split mid-entry */
+  .rp-entry, .rp-project, .rp-section { page-break-inside: avoid; }
+
+  /* No colored backgrounds on chips in print */
+  .rp-skill-chip {
+    background: none !important;
+    border: 1px solid #999 !important;
+    color: #000 !important;
+  }
+
+  /* Links print in black */
+  a { color: #000 !important; }
+}

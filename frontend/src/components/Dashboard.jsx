@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user')) || { id: 1, name: "Rufaida Mehzabin", role: "Student" };
   
   const [notifications, setNotifications] = useState([]);
@@ -464,9 +466,9 @@ export default function Dashboard() {
             <div style={styles.utilLeft}><span style={{...styles.utilIconSquare, color:'#10b981', backgroundColor:'#ecfdf5'}}>✅</span><strong>Eligibility Status</strong></div>
             <span style={styles.soonBadge}>COMING SOON</span>
           </div>
-          <div style={styles.sidebarSoonUtilityCard}>
+          <div style={styles.sidebarSoonUtilityCard} onClick={() => navigate('/resume')} title="Go to Resume Builder">
             <div style={styles.utilLeft}><span style={{...styles.utilIconSquare, color:'#8b5cf6', backgroundColor:'#f5f3ff'}}>📄</span><strong>Resume Builder</strong></div>
-            <span style={styles.soonBadge}>COMING SOON</span>
+            <span style={{...styles.soonBadge, backgroundColor:'#8b5cf6', color:'#fff', cursor:'pointer'}}>OPEN →</span>
           </div>
         </div>
 

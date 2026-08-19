@@ -8,6 +8,7 @@ const Job = require('./models/Job');
 const Project = require('./models/Project');
 const Application = require('./models/Application');
 const Notification = require('./models/Notification');
+const Resume = require('./models/Resume');
 
 // --- Routes ---
 const jobRoutes = require('./routes/jobs');
