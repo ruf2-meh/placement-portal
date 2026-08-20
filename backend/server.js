@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+<<<<<<< HEAD
 const { sequelize } = require('./database');
 
 // --- Models ---
@@ -10,6 +11,9 @@ const Application = require('./models/Application');
 const Notification = require('./models/Notification');
 const StudentProfile = require('./models/StudentProfile'); // Fixed path (single dot)
 const profileRoutes = require('./routes/profile');
+=======
+const connectDB = require('./database'); // Imports your updated database.js
+>>>>>>> main
 
 // --- Routes ---
 const jobRoutes = require('./routes/jobs');
@@ -18,6 +22,9 @@ const portalRoutes = require('./routes/portal');
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Connect to MongoDB
+connectDB();
 
 // Base Route
 app.get('/', (req, res) => {
@@ -30,6 +37,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/portal', portalRoutes);
 app.use('/api/profile', profileRoutes);
 
+<<<<<<< HEAD
 // Test connection and sync tables
 sequelize.authenticate()
     .then(() => {
@@ -42,6 +50,8 @@ sequelize.authenticate()
     })
     .catch((err) => console.error('❌ Database Sync Error: ', err));
 
+=======
+>>>>>>> main
 const PORT = 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server is flying smoothly on port ${PORT}`);

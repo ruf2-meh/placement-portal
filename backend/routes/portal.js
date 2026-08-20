@@ -7,7 +7,10 @@ const Job = require('../models/Job');
 const Project = require('../models/Project');
 const Application = require('../models/Application');
 const Notification = require('../models/Notification');
+<<<<<<< HEAD
 const StudentProfile = require('../models/StudentProfile'); 
+=======
+>>>>>>> main
 
 // =========================================================================
 // FEATURE 9: Student Project Showcase Profile
@@ -24,12 +27,20 @@ router.post('/projects', async (req, res) => {
             });
         }
 
+<<<<<<< HEAD
         const project = await Project.create({ 
             student_id, 
             title, 
             description, 
             link, 
             tech_stack 
+=======
+        const project = await Project.create({
+            student: student_id,
+            title,
+            description,
+            link
+>>>>>>> main
         });
 
         return res.status(201).json({ 
@@ -38,28 +49,32 @@ router.post('/projects', async (req, res) => {
         });
     } catch (err) {
         console.error('Error adding project:', err);
+<<<<<<< HEAD
         return res.status(500).json({
             message: 'Error adding project.'
         });
+=======
+        res.status(500).json({ message: 'Error adding project.' });
+>>>>>>> main
     }
 });
 
 // GET: Get a specific student's projects
 router.get('/projects/:student_id', async (req, res) => {
     try {
-        const projects = await Project.findAll({
-            where: {
-                student_id: req.params.student_id
-            },
-            order: [['createdAt', 'DESC']]
-        });
+        const projects = await Project.find({ student: req.params.student_id })
+            .sort({ createdAt: -1 });
 
         res.status(200).json(projects);
     } catch (err) {
         console.error('Error fetching projects:', err);
+<<<<<<< HEAD
         res.status(500).json({
             message: 'Error fetching projects.'
         });
+=======
+        res.status(500).json({ message: 'Error fetching projects.' });
+>>>>>>> main
     }
 });
 
@@ -100,36 +115,32 @@ router.delete('/projects/:id', async (req, res) => {
 router.get('/jobs/search', async (req, res) => {
     try {
         const { keyword } = req.query;
-
-        const queryOptions = {
-            order: [['createdAt', 'DESC']]
-        };
+        let queryFilter = {};
 
         if (keyword && keyword.trim()) {
-            queryOptions.where = {
-                [Op.or]: [
-                    {
-                        title: {
-                            [Op.like]: `%${keyword.trim()}%`
-                        }
-                    },
-                    {
-                        location: {
-                            [Op.like]: `%${keyword.trim()}%`
-                        }
-                    }
+            const searchRegex = new RegExp(keyword.trim(), 'i'); // Case-insensitive regex search
+            queryFilter = {
+                $or: [
+                    { title: { $regex: searchRegex } },
+                    { location: { $regex: searchRegex } }
                 ]
             };
         }
 
-        const jobs = await Job.findAll(queryOptions);
+        const jobs = await Job.find(queryFilter)
+            .populate('company', 'name email')
+            .sort({ createdAt: -1 });
 
         res.status(200).json(jobs);
     } catch (err) {
         console.error('Error searching jobs:', err);
+<<<<<<< HEAD
         res.status(500).json({
             message: 'Error searching jobs.'
         });
+=======
+        res.status(500).json({ message: 'Error searching jobs.' });
+>>>>>>> main
     }
 });
 
@@ -147,12 +158,15 @@ router.post('/jobs/apply', async (req, res) => {
             });
         }
 
+<<<<<<< HEAD
         const job = await Job.findByPk(job_id);
+=======
+        // Find the selected job
+        const job = await Job.findById(job_id);
+>>>>>>> main
 
         if (!job) {
-            return res.status(404).json({
-                message: 'Job not found.'
-            });
+            return res.status(404).json({ message: 'Job not found.' });
         }
 
         const today = new Date();
@@ -174,10 +188,8 @@ router.post('/jobs/apply', async (req, res) => {
         }
 
         const existingApplication = await Application.findOne({
-            where: {
-                job_id,
-                student_id
-            }
+            job: job_id,
+            student: student_id
         });
 
         if (existingApplication) {
@@ -187,19 +199,27 @@ router.post('/jobs/apply', async (req, res) => {
         }
 
         const application = await Application.create({
-            job_id,
-            student_id
+            job: job_id,
+            student: student_id
         });
 
+<<<<<<< HEAD
         if (job.company_id) {
             await Notification.create({
                 user_id: job.company_id,
                 message: `A student has applied for your job: "${job.title}".`
             });
         }
+=======
+        // FEATURE 23: Notify the company
+        await Notification.create({
+            user: job.company,
+            message: `A student has applied for your job: "${job.title}".`
+        });
+>>>>>>> main
 
         await Notification.create({
-            user_id: student_id,
+            user: student_id,
             message: `Your application for "${job.title}" was submitted successfully.`
         });
 
@@ -209,9 +229,13 @@ router.post('/jobs/apply', async (req, res) => {
         });
     } catch (err) {
         console.error('Error processing application:', err);
+<<<<<<< HEAD
         res.status(500).json({
             message: 'Error processing application.'
         });
+=======
+        res.status(500).json({ message: 'Error processing application.' });
+>>>>>>> main
     }
 });
 
@@ -221,37 +245,39 @@ router.post('/jobs/apply', async (req, res) => {
 
 router.get('/notifications/:user_id', async (req, res) => {
     try {
-        const notifications = await Notification.findAll({
-            where: {
-                user_id: req.params.user_id
-            },
-            order: [['createdAt', 'DESC']]
-        });
+        const notifications = await Notification.find({ user: req.params.user_id })
+            .sort({ createdAt: -1 });
 
         res.status(200).json(notifications);
     } catch (err) {
         console.error('Error fetching notifications:', err);
+<<<<<<< HEAD
         res.status(500).json({
             message: 'Error fetching notifications.'
         });
+=======
+        res.status(500).json({ message: 'Error fetching notifications.' });
+>>>>>>> main
     }
 });
 
 router.get('/notifications/:user_id/unread-count', async (req, res) => {
     try {
-        const unreadCount = await Notification.count({
-            where: {
-                user_id: req.params.user_id,
-                is_read: false
-            }
+        const unreadCount = await Notification.countDocuments({
+            user: req.params.user_id,
+            is_read: false
         });
 
         res.status(200).json({ unreadCount });
     } catch (err) {
         console.error('Error fetching unread notification count:', err);
+<<<<<<< HEAD
         res.status(500).json({
             message: 'Error fetching unread notification count.'
         });
+=======
+        res.status(500).json({ message: 'Error fetching unread notification count.' });
+>>>>>>> main
     }
 });
 
@@ -260,22 +286,16 @@ router.patch('/notifications/:notification_id/read', async (req, res) => {
         const { user_id } = req.body;
 
         if (!user_id) {
-            return res.status(400).json({
-                message: 'User ID is required.'
-            });
+            return res.status(400).json({ message: 'User ID is required.' });
         }
 
         const notification = await Notification.findOne({
-            where: {
-                id: req.params.notification_id,
-                user_id
-            }
+            _id: req.params.notification_id,
+            user: user_id
         });
 
         if (!notification) {
-            return res.status(404).json({
-                message: 'Notification not found.'
-            });
+            return res.status(404).json({ message: 'Notification not found.' });
         }
 
         notification.is_read = true;
@@ -287,14 +307,19 @@ router.patch('/notifications/:notification_id/read', async (req, res) => {
         });
     } catch (err) {
         console.error('Error updating notification:', err);
+<<<<<<< HEAD
         res.status(500).json({
             message: 'Error updating notification.'
         });
+=======
+        res.status(500).json({ message: 'Error updating notification.' });
+>>>>>>> main
     }
 });
 
 router.patch('/notifications/:user_id/read-all', async (req, res) => {
     try {
+<<<<<<< HEAD
         const [updatedCount] = await Notification.update(
             { is_read: true },
             {
@@ -303,17 +328,26 @@ router.patch('/notifications/:user_id/read-all', async (req, res) => {
                     is_read: false
                 }
             }
+=======
+        const updateResult = await Notification.updateMany(
+            { user: req.params.user_id, is_read: false },
+            { $set: { is_read: true } }
+>>>>>>> main
         );
 
         res.status(200).json({
             message: 'All notifications marked as read.',
-            updatedCount
+            updatedCount: updateResult.modifiedCount
         });
     } catch (err) {
         console.error('Error updating notifications:', err);
+<<<<<<< HEAD
         res.status(500).json({
             message: 'Error updating notifications.'
         });
+=======
+        res.status(500).json({ message: 'Error updating notifications.' });
+>>>>>>> main
     }
 });
 
@@ -323,19 +357,19 @@ router.patch('/notifications/:user_id/read-all', async (req, res) => {
 
 router.get('/jobs/company/:company_id', async (req, res) => {
     try {
-        const companyJobs = await Job.findAll({
-            where: {
-                company_id: req.params.company_id
-            },
-            order: [['createdAt', 'DESC']]
-        });
+        const companyJobs = await Job.find({ company: req.params.company_id })
+            .sort({ createdAt: -1 });
 
         res.status(200).json(companyJobs);
     } catch (err) {
         console.error('Error fetching company jobs:', err);
+<<<<<<< HEAD
         res.status(500).json({
             message: 'Error fetching company job listings.'
         });
+=======
+        res.status(500).json({ message: 'Error fetching company job listings.' });
+>>>>>>> main
     }
 });
 

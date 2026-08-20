@@ -713,6 +713,7 @@ const styles = {
   userAvatar: { width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#e2e8f0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '14px' },
   userInfo: { display: 'flex', flexDirection: 'column', textAlign: 'left' },
   userName: { fontSize: '14px', fontWeight: '600', color: '#0f172a' },
+<<<<<<< HEAD
   userRoleText: { fontSize: '12px', color: '#64748b' },
 
   notificationWrapper: { position: 'relative' },
@@ -778,4 +779,83 @@ const styles = {
   notificationBubble: { width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', display: 'flex', flexDirection: 'column', textAlign: 'left', cursor: 'pointer' },
   notificationBubbleRead: { backgroundColor: '#f8fafc', borderColor: '#f1f5f9' },
   notificationBubbleUnread: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }
+=======
+  userRoleText: { fontSize: '12px', color: '#64748b', textTransform: 'capitalize' },
+  signOutBtn: { display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#334155', transition: 'all 0.2s' },
+  
+  heroBanner: { background: 'linear-gradient(135deg, #1e40af 0%, #0284c7 60%, #0d9488 100%)', margin: '30px 40px', borderRadius: '20px', padding: '40px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', overflow: 'hidden', boxShadow: '0 10px 25px -5px rgba(30,64,175,0.15)' },
+  heroLeft: { flex: 1, zIndex: 2 },
+  workspacePill: { display: 'inline-block', backgroundColor: 'rgba(255,255,255,0.15)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: '600', marginBottom: '16px', backdropFilter: 'blur(4px)' },
+  heroTitle: { fontSize: '32px', fontWeight: '700', margin: '0 0 10px 0', letterSpacing: '-0.5px' },
+  heroSubtitle: { fontSize: '15px', color: 'rgba(255,255,255,0.85)', margin: '0 0 30px 0', maxWidth: '600px', lineHeight: '1.5' },
+  metricsRow: { display: 'flex', gap: '16px' },
+  metricCard: { backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', padding: '14px 24px', borderRadius: '14px', minWidth: '100px' },
+  metricValue: { display: 'block', fontSize: '24px', fontWeight: '700', marginBottom: '2px' },
+  metricLabel: { fontSize: '12px', color: 'rgba(255,255,255,0.75)' },
+  heroIllustration: { position: 'relative', width: '200px', height: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  graphicWindow: { width: '160px', height: '100px', backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '12px', padding: '12px', backdropFilter: 'blur(10px)' },
+  graphicLines: { width: '60%', height: '8px', backgroundColor: 'rgba(255,255,255,0.4)', borderRadius: '4px', boxShadow: '0 12px 0 rgba(255,255,255,0.2), 0 24px 0 rgba(255,255,255,0.2)' },
+
+  workspaceLayout: { display: 'flex', gap: '24px', margin: '0 40px' },
+  leftColumn: { flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' },
+  rightColumn: { width: '340px', display: 'flex', flexDirection: 'column', gap: '24px' },
+  
+  contentCard: { backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' },
+  cardHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' },
+  cardIcon: { width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold' },
+  cardTitle: { margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a' },
+  cardSub: { margin: '2px 0 0 0', fontSize: '13px', color: '#64748b' },
+  resultsBadge: { marginLeft: 'auto', backgroundColor: '#f1f5f9', color: '#475569', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' },
+
+  formLayout: { display: 'flex', flexDirection: 'column', gap: '16px' },
+  inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
+  fieldLabel: { fontSize: '13px', fontWeight: '600', color: '#334155' },
+  textInput: { width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box' },
+
+  primaryActionBtn: { backgroundColor: '#2563eb', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', cursor: 'pointer', transition: 'background-color 0.2s' },
+
+  searchBarRow: { display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '10px', border: '1px solid #e2e8f0' },
+  searchInnerIcon: { color: '#94a3b8', paddingLeft: '8px' },
+  searchInputField: { flex: 1, border: 'none', backgroundColor: 'transparent', fontSize: '14px', outline: 'none' },
+
+  filterChipsRow: { display: 'flex', gap: '8px', marginTop: '12px' },
+  chipPill: { padding: '4px 12px', backgroundColor: '#f1f5f9', color: '#64748b', borderRadius: '16px', fontSize: '12px', fontWeight: '500', cursor: 'pointer' },
+
+  dataItemRow: { padding: '16px', border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '10px' },
+  itemTitle: { margin: 0, fontSize: '16px', fontWeight: '600', color: '#0f172a' },
+  itemDescription: { margin: 0, fontSize: '13px', color: '#475569', lineHeight: '1.4' },
+  itemMetaLine: { display: 'flex', gap: '12px', fontSize: '12px', color: '#64748b', alignItems: 'center' },
+  applyInlineBtn: { alignSelf: 'flex-start', border: '1px solid #2563eb', color: '#2563eb', backgroundColor: '#eff6ff', padding: '6px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
+
+  emptyIllustrationState: { textAlign: 'center', padding: '30px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' },
+  searchLensGraphic: { width: '48px', height: '48px', backgroundColor: '#eff6ff', color: '#2563eb', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto', fontSize: '20px', position: 'relative' },
+  emptyStateTitle: { margin: '0 0 4px 0', fontSize: '15px', color: '#0f172a' },
+  emptyStateSub: { margin: 0, fontSize: '13px', color: '#64748b' },
+
+  projectItemBar: { padding: '12px 16px', border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#f8fafc', fontSize: '13px', display: 'flex', alignItems: 'center' },
+  projectLinkText: { color: '#2563eb', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+
+  bottomStatusGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' },
+  miniStatusCard: { backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px' },
+  miniIcon: { fontSize: '20px' },
+  miniTitle: { margin: '8px 0 4px 0', fontSize: '14px', fontWeight: '600', color: '#0f172a' },
+  miniSub: { margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.4' },
+  soonBadge: { fontSize: '10px', padding: '2px 6px', backgroundColor: '#f1f5f9', color: '#64748b', borderRadius: '4px', fontWeight: '700' },
+
+  alertUnreadText: { fontSize: '12px', color: '#2563eb', fontWeight: '600' },
+  alertHeaderActions: { marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' },
+  markAllButton: { background: 'none', border: 'none', color: '#2563eb', fontSize: '12px', fontWeight: '600', cursor: 'pointer', padding: 0 },
+  syncRefreshBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' },
+  bellEmptyIcon: { fontSize: '24px', color: '#94a3b8' },
+  
+  notificationBubble: { width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px' },
+  notificationBubbleUnread: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' },
+  notificationBubbleRead: { backgroundColor: '#ffffff' },
+  notificationMessage: { fontSize: '12px', color: '#1e293b', lineHeight: '1.4' },
+  notificationTime: { fontSize: '10px', color: '#94a3b8' },
+
+  sidebarSoonUtilityCard: { backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  utilLeft: { display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#334155' },
+  utilIconSquare: { width: '28px', height: '28px', backgroundColor: '#fef3c7', color: '#d97706', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }
+>>>>>>> main
 };
