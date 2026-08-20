@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Login from './components/Login';
-import Register from './components/Register'; // Make sure it's imported!
-import Dashboard from './components/Dashboard';
-=======
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
@@ -40,18 +34,21 @@ const DynamicDashboardRedirect = () => {
   const role = localStorage.getItem('role') || 'student';
   return <Navigate to={`/${role}-dashboard`} replace />;
 };
->>>>>>> main
 
 function App() {
   return (
     <Router>
       <Routes>
-<<<<<<< HEAD
-        <Route path="/" element={<Login />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} /> {/* <--- Check this line */}
-        <Route path="/dashboard" element={<Dashboard />} />
-=======
+        {/* Public Guest Routes (Redirects logged-in users to their dashboard) */}
+        <Route element={<PublicOnlyRoute />}>
+          <Route path="/" element={<Login />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Route>
+
+        {/* Generic /dashboard path redirects based on user role */}
+        <Route path="/dashboard" element={<DynamicDashboardRedirect />} />
+
         {/* Protected Dashboard Routes */}
         <Route element={<ProtectedRoute />}>
           <Route element={<RoleGuard allowedRole="student" />}>
@@ -71,15 +68,8 @@ function App() {
           </Route>
         </Route>
 
-        {/* Public Guest Routes */}
-        <Route element={<PublicOnlyRoute />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-        </Route>
-
         {/* Catch-all Fallback */}
         <Route path="*" element={<DynamicDashboardRedirect />} />
->>>>>>> main
       </Routes>
     </Router>
   );

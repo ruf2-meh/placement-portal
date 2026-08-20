@@ -100,7 +100,7 @@ const Register = () => {
                 <div style={styles.logoTopLeft}>
                     <div style={styles.logoBadge}>🕒</div>
                     <span style={styles.logoText}>HireHive</span>
-<<<<<<< HEAD
+
                 </div>
                 
                 <div style={styles.heroContent}>
@@ -114,8 +114,8 @@ const Register = () => {
                     </div>
                     <h1 style={styles.heroTitle}>Launch Your Internship Journey</h1>
                     <p style={styles.heroSubtitle}>Connect students, companies, and faculty through one intelligent internship management platform.</p>
-=======
->>>>>>> main
+
+
                 </div>
 
                 <div style={styles.heroContent}>
@@ -161,15 +161,7 @@ const Register = () => {
             <div style={styles.rightPanel}>
                 <div style={styles.formCard}>
                     <div style={styles.formHeaderBrand}>
-<<<<<<< HEAD
-                        <div style={{...styles.logoBadge, backgroundColor:'#2563eb'}}>🕒</div>
-                        <span style={{fontSize:'15px', fontWeight:'700', color:'#0f172a'}}>HireHive</span>
-=======
-                        <div style={{ ...styles.logoBadge, backgroundColor: '#2563eb' }}>🕒</div>
-                        <span style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
-                            HireHive
-                        </span>
->>>>>>> main
+
                     </div>
 
                     <h2 style={styles.welcomeText}>Create Account</h2>
@@ -277,11 +269,7 @@ const Register = () => {
                             Login
                         </Link>
                     </p>
-<<<<<<< HEAD
-                    
-=======
 
->>>>>>> main
                     <div style={styles.subCopyright}>© 2026 HireHive. All rights reserved.</div>
                 </div>
             </div>
