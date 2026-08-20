@@ -12,9 +12,16 @@ const JWT_SECRET = "super_secret_placement_portal_key";
 // ==========================================
 router.post('/register', async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        // Accept 'name' or 'fullName' to match frontend inputs flexible
+        const { name, fullName, email, password, role } = req.body;
+        const userName = name || fullName;
 
-        let user = await User.findOne({ where: { email } });
+        if (!userName || !email || !password) {
+            return res.status(400).json({ message: 'Please fill in all required fields.' });
+        }
+
+        // Check if user already exists
+        let user = await User.findOne({ email });
         if (user) {
             return res.status(400).json({ message: 'User already exists' });
         }
@@ -22,17 +29,25 @@ router.post('/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        // Pass 'userName' as 'name' to Mongoose
         user = await User.create({
-            name,
+            name: userName,
             email,
             password: hashedPassword,
-            role
+            role: role || 'student' // Default fallback if role isn't selected
         });
 
         res.status(201).json({ message: 'User registered successfully!' });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error("Registration Error:", err.message);
+
+        // Catch Mongoose ValidationError specifically
+        if (err.name === 'ValidationError') {
+            const messages = Object.values(err.errors).map(val => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
+
+        res.status(500).json({ message: 'Server Error' });
     }
 });
 
@@ -44,7 +59,7 @@ router.post('/login', async (req, res) => {
         const { email, password } = req.body;
 
         // Check if user exists
-        const user = await User.findOne({ where: { email } });
+        const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials (Email not found)' });
         }
@@ -55,21 +70,21 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials (Wrong password)' });
         }
 
-        // Generate a secure JWT Session Token
+        // Generate a secure JWT Session Token using user._id
         const payload = {
             user: {
-                id: user.id,
+                id: user._id,
                 role: user.role
             }
         };
 
         jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
             if (err) throw err;
-            // Send back the user details and token to the frontend
+            // Send back user details with MongoDB's _id
             res.json({
                 token,
                 user: {
-                    id: user.id,
+                    id: user._id,
                     name: user.name,
                     email: user.email,
                     role: user.role

@@ -1,9 +1,21 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../database');
+const mongoose = require('mongoose');
 
-const Application = sequelize.define('Application', {
-    job_id: { type: DataTypes.INTEGER, allowNull: false },
-    student_id: { type: DataTypes.INTEGER, allowNull: false }
-});
+const applicationSchema = new mongoose.Schema({
+  job: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Job',
+    required: true
+  },
+  student: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'reviewed', 'accepted', 'rejected'],
+    default: 'pending'
+  }
+}, { timestamps: true });
 
-module.exports = Application;
+module.exports = mongoose.model('Application', applicationSchema);

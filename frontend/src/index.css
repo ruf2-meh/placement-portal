@@ -1,9 +1,14 @@
 :root {
-  /* Premium Slate Theme Variables */
+  /* Slate Theme Design Tokens */
   --bg: #f8fafc;
+  --bg-code: #f1f5f9;
   --text: #1e293b;
   --text-h: #0f172a;
+  --text-code: #0f172a;
   --border: #e2e8f0;
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
+  
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
@@ -14,55 +19,75 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Standard Firefox Scrollbars */
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
-body {
+/* Global Reset for Accurate Layout Dimensions */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
   margin: 0;
   padding: 0;
-  background-color: #f8fafc;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg);
 }
 
-/* Remove the rigid width and text-center constraints */
+/* Application Layout Root */
 #root {
   width: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
 }
 
-/* Reset typography to prevent unwanted global scaling overrides */
+/* Typography Reset */
 h1, h2, h3, h4, h5, h6 {
   color: var(--text-h);
   font-family: var(--sans);
   margin-top: 0;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 p {
   margin: 0;
+  line-height: 1.5;
 }
 
 code {
   font-family: var(--mono);
-  font-size: 14px;
-  background-color: #f1f5f9;
+  font-size: 13px;
+  background-color: var(--bg-code);
   padding: 2px 6px;
   border-radius: 4px;
-  color: #0f172a;
+  color: var(--text-code);
+  border: 1px solid var(--border);
 }
 
-/* Scrollbar styling for smooth dashboard feeds */
+/* WebKit Scrollbars (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--scrollbar-thumb-hover);
 }
