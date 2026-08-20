@@ -1,13 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { sequelize } = require('./database');
-
-// --- Models ---
-const User = require('./models/User'); 
-const Job = require('./models/Job');
-const Project = require('./models/Project');
-const Application = require('./models/Application');
-const Notification = require('./models/Notification');
+const connectDB = require('./database'); // Imports your updated database.js
 
 // --- Routes ---
 const jobRoutes = require('./routes/jobs');
@@ -16,6 +9,9 @@ const portalRoutes = require('./routes/portal');
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Connect to MongoDB
+connectDB();
 
 // Base Route
 app.get('/', (req, res) => {
@@ -26,18 +22,6 @@ app.get('/', (req, res) => {
 app.use('/api/auth', require('./routes/auth.js'));
 app.use('/api/jobs', jobRoutes);
 app.use('/api/portal', portalRoutes);
-
-// Test connection and sync tables
-sequelize.authenticate()
-    .then(() => {
-        console.log('✅ Local SQLite Database File Connected Successfully!');
-        // force: false ensures it won't delete your data if it restarts
-        return sequelize.sync({ force: false }); 
-    })
-    .then(() => {
-        console.log('📦 All database tables synchronized perfectly!');
-    })
-    .catch((err) => console.error('❌ Database Sync Error: ', err));
 
 const PORT = 5000;
 app.listen(PORT, () => {

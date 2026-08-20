@@ -162,7 +162,7 @@ export default function Dashboard() {
       <nav style={styles.navbar}>
         <div style={styles.navLeft}>
           <div style={styles.logoBadge}>🕒</div>
-          <span style={styles.logoText}>InternSphere</span>
+          <span style={styles.logoText}>HireHive</span>
           <div style={styles.divider}>|</div>
           <span style={styles.breadcrumbLink}>Dashboard</span>
           <span style={styles.breadcrumbArrow}>&gt;</span>
@@ -607,66 +607,69 @@ const styles = {
   metricCard: { backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', padding: '14px 24px', borderRadius: '14px', minWidth: '100px' },
   metricValue: { display: 'block', fontSize: '24px', fontWeight: '700', marginBottom: '2px' },
   metricLabel: { fontSize: '12px', color: 'rgba(255,255,255,0.75)' },
-  heroIllustration: { position: 'absolute', right: '40px', bottom: '10px', width: '220px', height: '160px', opacity: 0.25, zIndex: 1 },
-  graphicWindow: { width: '100%', height: '100%', border: '3px solid #fff', borderRadius: '12px', padding: '15px', boxSizing: 'border-box' },
-  graphicLines: { width: '50%', height: '6px', backgroundColor: '#fff', borderRadius: '4px' },
+  heroIllustration: { position: 'relative', width: '200px', height: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  graphicWindow: { width: '160px', height: '100px', backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '12px', padding: '12px', backdropFilter: 'blur(10px)' },
+  graphicLines: { width: '60%', height: '8px', backgroundColor: 'rgba(255,255,255,0.4)', borderRadius: '4px', boxShadow: '0 12px 0 rgba(255,255,255,0.2), 0 24px 0 rgba(255,255,255,0.2)' },
 
-  workspaceLayout: { display: 'grid', gridTemplateColumns: '2.1fr 0.9fr', gap: '30px', margin: '0 40px' },
-  leftColumn: { display: 'flex', flexDirection: 'column', gap: '30px' },
-  rightColumn: { display: 'flex', flexDirection: 'column', gap: '16px' },
+  workspaceLayout: { display: 'flex', gap: '24px', margin: '0 40px' },
+  leftColumn: { flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' },
+  rightColumn: { width: '340px', display: 'flex', flexDirection: 'column', gap: '24px' },
   
-  contentCard: { backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '28px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.01)' },
-  cardHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', position: 'relative' },
-  cardIcon: { width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 'bold' },
-  cardTitle: { fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 2px 0' },
-  cardSub: { fontSize: '13px', color: '#64748b', margin: 0 },
-  resultsBadge: { position: 'absolute', right: 0, top: '8px', backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '12px', padding: '4px 10px', borderRadius: '30px', fontWeight: '500' },
-  
-  searchBarRow: { display: 'flex', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '6px 6px 6px 16px', alignItems: 'center', gap: '10px' },
-  searchInnerIcon: { color: '#94a3b8', fontSize: '16px' },
-  searchInputField: { flex: 1, border: 'none', outline: 'none', color: '#334155', fontSize: '14px', backgroundColor: 'transparent' },
-  primaryActionBtn: { backgroundColor: '#2563eb', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', boxShadow: '0 4px 12px rgba(37,99,235,0.15)' },
-  
-  filterChipsRow: { display: 'flex', gap: '8px', marginTop: '12px' },
-  chipPill: { fontSize: '13px', color: '#475569', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', padding: '6px 16px', borderRadius: '30px', cursor: 'pointer' },
-  
-  emptyIllustrationState: { textAlign: 'center', padding: '40px 20px', border: '1px dashed #e2e8f0', borderRadius: '14px', backgroundColor: '#f8fafc' },
-  searchLensGraphic: { width: '54px', height: '54px', borderRadius: '50%', backgroundColor: '#eff6ff', color: '#2563eb', fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', position: 'relative' },
-  emptyStateTitle: { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 6px 0' },
-  emptyStateSub: { fontSize: '13px', color: '#64748b', margin: 0, maxWidth: '340px', margin: '0 auto', lineHeight: '1.5' },
-  
-  dataItemRow: { padding: '20px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' },
-  itemTitle: { fontSize: '16px', fontWeight: '700', color: '#2563eb', margin: '0 0 6px 0' },
-  itemDescription: { fontSize: '14px', color: '#475569', margin: '0 0 12px 0', lineHeight: '1.5' },
-  itemMetaLine: { display: 'flex', gap: '10px', fontSize: '12px', color: '#64748b', marginBottom: '14px' },
-  applyInlineBtn: { backgroundColor: '#10b981', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' },
-  
-  formLayout: { display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '15px' },
+  contentCard: { backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' },
+  cardHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' },
+  cardIcon: { width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold' },
+  cardTitle: { margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a' },
+  cardSub: { margin: '2px 0 0 0', fontSize: '13px', color: '#64748b' },
+  resultsBadge: { marginLeft: 'auto', backgroundColor: '#f1f5f9', color: '#475569', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' },
+
+  formLayout: { display: 'flex', flexDirection: 'column', gap: '16px' },
   inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
-  fieldLabel: { fontSize: '13px', fontWeight: '600', color: '#344155' },
-  textInput: { width: '100%', padding: '12px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', backgroundColor: '#fff', color: '#334155', fontSize: '14px', outline: 'none', boxSizing: 'border-box' },
-  projectItemBar: { display: 'flex', alignItems: 'center', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px' },
-  projectLinkText: { color: '#8b5cf6', textDecoration: 'none', fontWeight: '500' },
-  
-  bottomStatusGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '10px' },
-  miniStatusCard: { backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' },
+  fieldLabel: { fontSize: '13px', fontWeight: '600', color: '#334155' },
+  textInput: { width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box' },
+
+  primaryActionBtn: { backgroundColor: '#2563eb', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', cursor: 'pointer', transition: 'background-color 0.2s' },
+
+  searchBarRow: { display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '10px', border: '1px solid #e2e8f0' },
+  searchInnerIcon: { color: '#94a3b8', paddingLeft: '8px' },
+  searchInputField: { flex: 1, border: 'none', backgroundColor: 'transparent', fontSize: '14px', outline: 'none' },
+
+  filterChipsRow: { display: 'flex', gap: '8px', marginTop: '12px' },
+  chipPill: { padding: '4px 12px', backgroundColor: '#f1f5f9', color: '#64748b', borderRadius: '16px', fontSize: '12px', fontWeight: '500', cursor: 'pointer' },
+
+  dataItemRow: { padding: '16px', border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '10px' },
+  itemTitle: { margin: 0, fontSize: '16px', fontWeight: '600', color: '#0f172a' },
+  itemDescription: { margin: 0, fontSize: '13px', color: '#475569', lineHeight: '1.4' },
+  itemMetaLine: { display: 'flex', gap: '12px', fontSize: '12px', color: '#64748b', alignItems: 'center' },
+  applyInlineBtn: { alignSelf: 'flex-start', border: '1px solid #2563eb', color: '#2563eb', backgroundColor: '#eff6ff', padding: '6px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
+
+  emptyIllustrationState: { textAlign: 'center', padding: '30px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' },
+  searchLensGraphic: { width: '48px', height: '48px', backgroundColor: '#eff6ff', color: '#2563eb', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto', fontSize: '20px', position: 'relative' },
+  emptyStateTitle: { margin: '0 0 4px 0', fontSize: '15px', color: '#0f172a' },
+  emptyStateSub: { margin: 0, fontSize: '13px', color: '#64748b' },
+
+  projectItemBar: { padding: '12px 16px', border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#f8fafc', fontSize: '13px', display: 'flex', alignItems: 'center' },
+  projectLinkText: { color: '#2563eb', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+
+  bottomStatusGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' },
+  miniStatusCard: { backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px' },
   miniIcon: { fontSize: '20px' },
-  miniTitle: { fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: '12px 0 4px 0' },
-  miniSub: { fontSize: '12px', color: '#64748b', margin: 0, lineHeight: '1.4' },
-  soonBadge: { backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '10px', fontWeight: '700', padding: '3px 8px', borderRadius: '4px', letterSpacing: '0.5px' },
+  miniTitle: { margin: '8px 0 4px 0', fontSize: '14px', fontWeight: '600', color: '#0f172a' },
+  miniSub: { margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.4' },
+  soonBadge: { fontSize: '10px', padding: '2px 6px', backgroundColor: '#f1f5f9', color: '#64748b', borderRadius: '4px', fontWeight: '700' },
+
+  alertUnreadText: { fontSize: '12px', color: '#2563eb', fontWeight: '600' },
+  alertHeaderActions: { marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' },
+  markAllButton: { background: 'none', border: 'none', color: '#2563eb', fontSize: '12px', fontWeight: '600', cursor: 'pointer', padding: 0 },
+  syncRefreshBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' },
+  bellEmptyIcon: { fontSize: '24px', color: '#94a3b8' },
   
-  alertUnreadText: { display: 'block', marginTop: '3px', fontSize: '11px', color: '#64748b' },
-  alertHeaderActions: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' },
-  markAllButton: { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '11px', fontWeight: '600', padding: '4px' },
-  syncRefreshBtn: { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '16px', padding: '4px' },
-  bellEmptyIcon: { fontSize: '28px', color: '#cbd5e1' },
-  notificationBubble: { width: '100%', padding: '12px 14px', borderRadius: '10px', borderLeft: '4px solid #2563eb', borderTop: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '13px', lineHeight: '1.4', color: '#334155', textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '6px' },
-  notificationBubbleUnread: { backgroundColor: '#eff6ff', fontWeight: '600' },
-  notificationBubbleRead: { backgroundColor: '#ffffff', fontWeight: '400', opacity: 0.82 },
-  notificationMessage: { color: '#334155', fontSize: '13px', lineHeight: '1.4' },
-  notificationTime: { color: '#94a3b8', fontSize: '10px', fontWeight: '400' },
-  
-  sidebarSoonUtilityCard: { backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' },
-  utilLeft: { display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#0f172a' },
-  utilIconSquare: { width: '32px', height: '32px', backgroundColor: '#fff7ed', color: '#f97316', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }
+  notificationBubble: { width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px' },
+  notificationBubbleUnread: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' },
+  notificationBubbleRead: { backgroundColor: '#ffffff' },
+  notificationMessage: { fontSize: '12px', color: '#1e293b', lineHeight: '1.4' },
+  notificationTime: { fontSize: '10px', color: '#94a3b8' },
+
+  sidebarSoonUtilityCard: { backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  utilLeft: { display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#334155' },
+  utilIconSquare: { width: '28px', height: '28px', backgroundColor: '#fef3c7', color: '#d97706', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }
 };

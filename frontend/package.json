@@ -1,16 +1,17 @@
 {
-  "name": "frontend",
+  "name": "hirehive-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "oxlint && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
     "axios": "^1.18.1",
+    "jwt-decode": "^4.0.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1"
