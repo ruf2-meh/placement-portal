@@ -466,10 +466,12 @@ export default function Dashboard() {
             <div style={styles.utilLeft}><span style={{...styles.utilIconSquare, color:'#10b981', backgroundColor:'#ecfdf5'}}>✅</span><strong>Eligibility Status</strong></div>
             <span style={styles.soonBadge}>COMING SOON</span>
           </div>
-          <div style={styles.sidebarSoonUtilityCard} onClick={() => navigate('/resume')} title="Go to Resume Builder">
-            <div style={styles.utilLeft}><span style={{...styles.utilIconSquare, color:'#8b5cf6', backgroundColor:'#f5f3ff'}}>📄</span><strong>Resume Builder</strong></div>
-            <span style={{...styles.soonBadge, backgroundColor:'#8b5cf6', color:'#fff', cursor:'pointer'}}>OPEN →</span>
-          </div>
+          {user.role === 'Student' && (
+            <div style={styles.sidebarSoonUtilityCard} onClick={() => navigate('/resume')} title="Go to Resume Builder">
+              <div style={styles.utilLeft}><span style={{...styles.utilIconSquare, color:'#8b5cf6', backgroundColor:'#f5f3ff'}}>📄</span><strong>Resume Builder</strong></div>
+              <span style={{...styles.soonBadge, backgroundColor:'#8b5cf6', color:'#fff', cursor:'pointer'}}>OPEN →</span>
+            </div>
+          )}
         </div>
 
       </div>
