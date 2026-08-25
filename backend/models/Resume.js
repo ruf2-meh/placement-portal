@@ -26,6 +26,9 @@ const Resume = sequelize.define('Resume', {
     experience: {
         type: DataTypes.TEXT
     },
+    research: {
+        type: DataTypes.TEXT
+    },
     skills: {
         type: DataTypes.TEXT
     },

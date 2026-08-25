@@ -329,72 +329,182 @@
 .rb-status-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
 .rb-status-error   { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
 
-/* ════════════════════════════════════════════════
-   RESUME PREVIEW  (right column — also the
-   print target for Feature 8)
-   ════════════════════════════════════════════════ */
+/* ── Utility: hide in print ── */
+.rb-no-print { /* used by navbar, hero, and preview label */ }
 
+/* ── Preview panel on-screen styles ── */
 .rb-preview-panel {
   position: sticky;
   top: 20px;
 }
 
-/* The element that gets printed */
+/* ═══════════════════════════════════════════════════
+   RESUME PRINT AREA — on-screen & PDF shared styles
+   ═══════════════════════════════════════════════════ */
 #resume-print-area {
   font-family: 'Georgia', 'Times New Roman', serif;
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.4;
   color: #111;
   background: #fff;
-  padding: 32px 36px;
+  padding: 36px 40px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.07);
 }
 
-.rp-header { border-bottom: 2px solid #2563eb; padding-bottom: 14px; margin-bottom: 18px; }
-.rp-name   { font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 4px; }
+/* ── Header ── */
+.rp-header {
+  border-bottom: 2px solid #1d4ed8;
+  padding-bottom: 14px;
+  margin-bottom: 20px;
+}
+.rp-name {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+  margin: 0 0 6px;
+  line-height: 1.15;
+}
+
+/* Contact row — text-based, mid-dot between items via ::before pseudo-element */
 .rp-contact {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  font-size: 12px;
-  color: #475569;
-  margin-top: 6px;
+  align-items: center;
+  gap: 0;           /* gap handled by separator */
+  font-size: 11.5px;
+  color: #4b5563;
+  margin-top: 5px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
-.rp-contact span { display: flex; align-items: center; gap: 4px; }
-.rp-contact a { color: #2563eb; text-decoration: none; }
 
-.rp-section { margin-bottom: 18px; }
+/* Each contact item gets a preceding separator dot, except the first visible one */
+.rp-contact-item {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Dot separator rendered via CSS — no emoji needed */
+.rp-contact-item + .rp-contact-item::before {
+  content: '·';
+  margin: 0 6px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.rp-contact a {
+  color: #1d4ed8;
+  text-decoration: none;
+  font-weight: 500;
+}
+.rp-contact a:hover {
+  text-decoration: underline;
+}
+
+/* ── Sections — consistent spacing across ALL sections ── */
+.rp-section {
+  margin-top: 18px;
+  margin-bottom: 0;
+}
+.rp-section:first-of-type {
+  margin-top: 0;
+}
+
+/* Shared section header — one rule governs all four sections */
 .rp-section-title {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #2563eb;
-  border-bottom: 1px solid #bfdbfe;
-  padding-bottom: 4px;
-  margin-bottom: 10px;
+  letter-spacing: 0.8px;
+  color: #1d4ed8;
+  border-bottom: 1.5px solid #bfdbfe;
+  padding-bottom: 3px;
+  margin: 0 0 10px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
-.rp-summary-text { font-size: 13px; color: #334155; line-height: 1.6; margin: 0; }
 
-.rp-entry { margin-bottom: 12px; }
+/* ── Summary ── */
+.rp-summary-text {
+  font-size: 12.5px;
+  color: #374151;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* ── Education / Experience entries ── */
+.rp-entry {
+  margin-bottom: 13px;
+  break-inside: avoid;
+}
+.rp-entry:last-child {
+  margin-bottom: 0;
+}
 .rp-entry-top {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
 }
-.rp-entry-name { font-weight: 700; font-size: 14px; color: #0f172a; }
-.rp-entry-dates { font-size: 11px; color: #64748b; white-space: nowrap; }
-.rp-entry-sub  { font-size: 12px; color: #475569; margin: 2px 0 4px; font-style: italic; }
-.rp-entry-desc { font-size: 12px; color: #334155; margin: 0; line-height: 1.5; }
 
-.rp-skills-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+/* Company / Institution — bold, clear primary line */
+.rp-entry-name {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: #0f172a;
+  line-height: 1.3;
 }
+
+/* Dates — small, muted, right-aligned */
+.rp-entry-dates {
+  font-size: 10.5px;
+  color: #6b7280;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Role / Degree — italic, secondary */
+.rp-entry-sub {
+  font-size: 12px;
+  color: #374151;
+  margin: 2px 0 4px;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+/* Experience bullet list */
+.rp-entry-bullets {
+  margin: 4px 0 0 0;
+  padding-left: 16px;
+  list-style: disc;
+  color: #374151;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.rp-entry-bullets li {
+  margin-bottom: 2px;
+}
+.rp-entry-bullets li:last-child {
+  margin-bottom: 0;
+}
+
+/* Kept for backward compat — not used in current JSX */
+.rp-entry-desc { font-size: 12px; color: #374151; margin: 0; line-height: 1.4; }
+
+/* ── Skills — inline dot-separated ── */
+.rp-skills-inline {
+  font-size: 12.5px;
+  color: #374151;
+  line-height: 1.45;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Legacy chip styles — kept for backward compat */
+.rp-skills-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .rp-skill-chip {
   background: #eff6ff;
   border: 1px solid #bfdbfe;
@@ -405,81 +515,127 @@
   font-weight: 600;
 }
 
-.rp-project { margin-bottom: 10px; }
-.rp-project-title { font-weight: 700; font-size: 13px; color: #0f172a; }
-.rp-project-link { font-size: 11px; color: #2563eb; }
-.rp-project-link a { color: #2563eb; text-decoration: none; }
-.rp-project-desc { font-size: 12px; color: #334155; margin: 3px 0 0; line-height: 1.5; }
+/* ── Projects ── */
+.rp-project { margin-bottom: 10px; break-inside: avoid; }
+.rp-project:last-child { margin-bottom: 0; }
+.rp-project-title { font-weight: 700; font-size: 13px; color: #0f172a; margin: 0 0 2px; }
+.rp-project-link  { font-size: 11px; color: #1d4ed8; margin: 0 0 2px; }
+.rp-project-link a { color: #1d4ed8; text-decoration: none; }
+.rp-project-desc  { font-size: 12px; color: #374151; margin: 3px 0 0; line-height: 1.4; }
+
+/* ── Responsive: stack vertically on narrow screens ── */
+@media (max-width: 900px) {
+  .rb-layout {
+    grid-template-columns: 1fr;
+  }
+  .rb-preview-panel {
+    position: static;
+  }
+  .rb-hero,
+  .rb-layout {
+    margin: 16px;
+  }
+}
 
 /* ════════════════════════════════════════════════
    @media print — Feature 8
-   Hides everything except #resume-print-area
+   Strategy: hide .rb-form-panel and .rb-no-print
+   DIRECTLY (not via a shared parent).
    ════════════════════════════════════════════════ */
 
 @media print {
-  /* Reset body/html */
+  /* ── Page margins ── */
+  @page {
+    margin: 0.55in 0.7in;
+  }
+
   html, body {
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
     color: #000 !important;
-    font-size: 12pt !important;
   }
 
-  /* Hide everything on the page by default */
-  body > *,
-  .rb-page > * {
+  /* ── Hide form panel and chrome directly ── */
+  .rb-form-panel,
+  .rb-no-print {
     display: none !important;
   }
 
-  /* Then show ONLY the resume layout area */
-  .rb-layout {
+  /* ── Show page wrapper, layout, preview panel ── */
+  .rb-page,
+  .rb-layout,
+  .rb-preview-panel {
     display: block !important;
     margin: 0 !important;
     padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    position: static !important;
   }
 
-  /* Hide the form column */
-  .rb-layout > *:first-child {
-    display: none !important;
-  }
-
-  /* Show the preview column */
-  .rb-layout > *:last-child {
-    display: block !important;
-  }
-
-  /* Full-page resume */
+  /* ── Full-page resume area ── */
   #resume-print-area {
-    all: unset !important;
     display: block !important;
     font-family: 'Georgia', 'Times New Roman', serif !important;
-    font-size: 11pt !important;
-    line-height: 1.55 !important;
+    font-size: 10.5pt !important;
+    line-height: 1.4 !important;
     color: #000 !important;
     background: #fff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
     margin: 0 !important;
-    padding: 0.5in 0.75in !important;
-    width: auto !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
     box-shadow: none !important;
     border: none !important;
     border-radius: 0 !important;
-    page-break-inside: auto;
+    overflow: visible !important;
   }
 
-  /* Name stays large */
-  .rp-name { font-size: 20pt !important; }
-
-  /* Sections don't split mid-entry */
-  .rp-entry, .rp-project, .rp-section { page-break-inside: avoid; }
-
-  /* No colored backgrounds on chips in print */
-  .rp-skill-chip {
-    background: none !important;
-    border: 1px solid #999 !important;
-    color: #000 !important;
+  /* ── Name ── */
+  .rp-name {
+    font-size: 20pt !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.3pt !important;
   }
 
-  /* Links print in black */
-  a { color: #000 !important; }
+  /* ── Contact separator inherits print color ── */
+  .rp-contact-item + .rp-contact-item::before {
+    color: #6b7280 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* ── Section title border accent ── */
+  .rp-section-title {
+    color: #1d4ed8 !important;
+    border-bottom: 1.5pt solid #bfdbfe !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* ── Header accent border ── */
+  .rp-header {
+    border-bottom: 1.5pt solid #1d4ed8 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* ── Bullet list tightens slightly for print ── */
+  .rp-entry-bullets {
+    padding-left: 14pt !important;
+    font-size: 10pt !important;
+  }
+
+  /* ── No mid-entry page breaks ── */
+  .rp-entry, .rp-project, .rp-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* ── Links print in dark blue ── */
+  a { color: #1d4ed8 !important; text-decoration: none !important; }
 }

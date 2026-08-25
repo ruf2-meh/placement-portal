@@ -5,6 +5,7 @@ import './ResumeBuilder.css';
 // ─── helpers ─────────────────────────────────────────────────────────────────
 const emptyEdu = () => ({ institution: '', degree: '', startYear: '', endYear: '' });
 const emptyExp = () => ({ company: '', role: '', startDate: '', endDate: '', description: '' });
+const emptyRes = () => ({ title: '', institution: '', startDate: '', endDate: '', description: '' });
 const emptyLinks = () => ({ linkedin: '', github: '', portfolio: '' });
 
 export default function ResumeBuilder() {
@@ -18,6 +19,7 @@ export default function ResumeBuilder() {
   const [summary, setSummary]       = useState('');
   const [education, setEducation]   = useState([emptyEdu()]);
   const [experience, setExperience] = useState([emptyExp()]);
+  const [research, setResearch]     = useState([]);
   const [skills, setSkills]         = useState([]);
   const [skillInput, setSkillInput] = useState('');
   const [links, setLinks]           = useState(emptyLinks());
@@ -42,6 +44,7 @@ export default function ResumeBuilder() {
         setSummary(r.summary || '');
         setEducation(Array.isArray(r.education) && r.education.length ? r.education : [emptyEdu()]);
         setExperience(Array.isArray(r.experience) && r.experience.length ? r.experience : [emptyExp()]);
+        setResearch(Array.isArray(r.research) ? r.research : []);
         setSkills(Array.isArray(r.skills) ? r.skills : []);
         setLinks(r.links && typeof r.links === 'object' ? r.links : emptyLinks());
         setIncludeProjects(r.include_projects !== undefined ? r.include_projects : true);
@@ -88,6 +91,7 @@ export default function ResumeBuilder() {
         summary,
         education,
         experience,
+        research,
         skills,
         links,
         include_projects: includeProjects
@@ -112,6 +116,12 @@ export default function ResumeBuilder() {
   const addExp    = () => setExperience(prev => [...prev, emptyExp()]);
   const removeExp = (i) => setExperience(prev => prev.filter((_, idx) => idx !== i));
 
+  // ── Research helpers ────────────────────────────────────────────────────────
+  const updateRes = (i, field, val) =>
+    setResearch(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
+  const addRes    = () => setResearch(prev => [...prev, emptyRes()]);
+  const removeRes = (i) => setResearch(prev => prev.filter((_, idx) => idx !== i));
+
   // ── Skills helpers ──────────────────────────────────────────────────────────
   const handleSkillKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -131,13 +141,14 @@ export default function ResumeBuilder() {
   // ── Derived: filter out empty education/experience rows for preview ──────────
   const previewEdu = education.filter(e => e.institution || e.degree);
   const previewExp = experience.filter(e => e.company || e.role);
+  const previewRes = research.filter(r => r.title || r.institution);
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="rb-page">
 
       {/* ── Navbar ──────────────────────────────────────────────────────────── */}
-      <nav className="rb-navbar">
+      <nav className="rb-navbar rb-no-print">
         <div className="rb-nav-left">
           <div className="rb-logo-badge">🕒</div>
           <span className="rb-logo-text">InternSphere</span>
@@ -152,7 +163,7 @@ export default function ResumeBuilder() {
       </nav>
 
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
-      <div className="rb-hero">
+      <div className="rb-hero rb-no-print">
         <div className="rb-hero-pill">● Resume Builder</div>
         <h1 className="rb-hero-title">Build Your Professional Resume</h1>
         <p className="rb-hero-sub">
@@ -164,7 +175,8 @@ export default function ResumeBuilder() {
       <div className="rb-layout">
 
         {/* ════════ LEFT: BUILDER FORM ════════════════════════════════════════ */}
-        <div>
+        {/* rb-form-panel is the direct @media print hide target — avoids shared-parent bug */}
+        <div className="rb-form-panel">
           <form onSubmit={handleSave}>
 
             {/* Personal Info */}
@@ -411,6 +423,83 @@ export default function ResumeBuilder() {
               <button type="button" className="rb-add-btn" onClick={addExp}>+ Add Experience</button>
             </div>
 
+            {/* Research Experience */}
+            <div className="rb-card" style={{ marginTop: '20px' }}>
+              <div className="rb-card-header">
+                <div className="rb-card-icon" style={{ background: '#fef3c7', color: '#d97706' }}>🔬</div>
+                <div>
+                  <p className="rb-card-title">Research Experience</p>
+                  <p className="rb-card-sub">Research positions, publications, lab work</p>
+                </div>
+              </div>
+
+              {research.length === 0 && (
+                <p style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 12px' }}>
+                  No research entries yet — click below to add one.
+                </p>
+              )}
+
+              {research.map((res, i) => (
+                <div key={i} className="rb-entry-block">
+                  <button type="button" className="rb-entry-remove" onClick={() => removeRes(i)}>✕ Remove</button>
+                  <div className="rb-form-row">
+                    <div className="rb-form-group">
+                      <label className="rb-label">Title / Role</label>
+                      <input
+                        className="rb-input"
+                        type="text"
+                        placeholder="e.g. Research Assistant"
+                        value={res.title}
+                        onChange={e => updateRes(i, 'title', e.target.value)}
+                      />
+                    </div>
+                    <div className="rb-form-group">
+                      <label className="rb-label">Institution / Lab / Venue</label>
+                      <input
+                        className="rb-input"
+                        type="text"
+                        placeholder="e.g. MIT CSAIL"
+                        value={res.institution}
+                        onChange={e => updateRes(i, 'institution', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="rb-form-row">
+                    <div className="rb-form-group">
+                      <label className="rb-label">Start Date</label>
+                      <input
+                        className="rb-input"
+                        type="text"
+                        placeholder="Jan 2023"
+                        value={res.startDate}
+                        onChange={e => updateRes(i, 'startDate', e.target.value)}
+                      />
+                    </div>
+                    <div className="rb-form-group">
+                      <label className="rb-label">End Date</label>
+                      <input
+                        className="rb-input"
+                        type="text"
+                        placeholder="Dec 2023 or Present"
+                        value={res.endDate}
+                        onChange={e => updateRes(i, 'endDate', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="rb-form-group">
+                    <label className="rb-label">Description</label>
+                    <textarea
+                      className="rb-textarea"
+                      placeholder="Describe your research contributions (one per line for bullets)..."
+                      value={res.description}
+                      onChange={e => updateRes(i, 'description', e.target.value)}
+                    />
+                  </div>
+                </div>
+              ))}
+              <button type="button" className="rb-add-btn" onClick={addRes}>+ Add Research Entry</button>
+            </div>
+
             {/* Skills */}
             <div className="rb-card" style={{ marginTop: '20px' }}>
               <div className="rb-card-header">
@@ -492,7 +581,7 @@ export default function ResumeBuilder() {
 
         {/* ════════ RIGHT: LIVE PREVIEW ════════════════════════════════════════ */}
         <div className="rb-preview-panel">
-          <div className="rb-card rb-card-header" style={{ marginBottom: '16px' }}>
+          <div className="rb-card rb-preview-label rb-no-print" style={{ marginBottom: '16px' }}>
             <div className="rb-card-icon" style={{ background: '#f5f3ff', color: '#8b5cf6' }}>👁️</div>
             <div>
               <p className="rb-card-title">Live Preview</p>
@@ -500,18 +589,18 @@ export default function ResumeBuilder() {
             </div>
           </div>
 
-          {/* The printable area */}
+          {/* The printable area — same markup for on-screen preview AND print/PDF */}
           <div id="resume-print-area">
 
             {/* Header */}
             <div className="rp-header">
               <p className="rp-name">{fullName || 'Your Name'}</p>
               <div className="rp-contact">
-                {email     && <span>✉ {email}</span>}
-                {phone     && <span>📞 {phone}</span>}
-                {links.linkedin  && <span>🔗 <a href={links.linkedin}  target="_blank" rel="noreferrer">LinkedIn</a></span>}
-                {links.github    && <span>💻 <a href={links.github}    target="_blank" rel="noreferrer">GitHub</a></span>}
-                {links.portfolio && <span>🌐 <a href={links.portfolio} target="_blank" rel="noreferrer">Portfolio</a></span>}
+                {email           && <span className="rp-contact-item">{email}</span>}
+                {phone           && <span className="rp-contact-item">{phone}</span>}
+                {links.linkedin  && <span className="rp-contact-item"><a href={links.linkedin}  target="_blank" rel="noreferrer">LinkedIn</a></span>}
+                {links.github    && <span className="rp-contact-item"><a href={links.github}    target="_blank" rel="noreferrer">GitHub</a></span>}
+                {links.portfolio && <span className="rp-contact-item"><a href={links.portfolio} target="_blank" rel="noreferrer">Portfolio</a></span>}
               </div>
             </div>
 
@@ -549,20 +638,47 @@ export default function ResumeBuilder() {
                       <span className="rp-entry-name">{exp.company}</span>
                       <span className="rp-entry-dates">{exp.startDate}{exp.startDate && exp.endDate ? ' – ' : ''}{exp.endDate}</span>
                     </div>
-                    {exp.role        && <p className="rp-entry-sub">{exp.role}</p>}
-                    {exp.description && <p className="rp-entry-desc">{exp.description}</p>}
+                    {exp.role && <p className="rp-entry-sub">{exp.role}</p>}
+                    {exp.description && (
+                      <ul className="rp-entry-bullets">
+                        {exp.description.split('\n').filter(l => l.trim()).map((line, li) => (
+                          <li key={li}>{line.trim()}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Skills */}
+            {/* Research Experience */}
+            {previewRes.length > 0 && (
+              <div className="rp-section">
+                <p className="rp-section-title">Research Experience</p>
+                {previewRes.map((res, i) => (
+                  <div key={i} className="rp-entry">
+                    <div className="rp-entry-top">
+                      <span className="rp-entry-name">{res.institution}</span>
+                      <span className="rp-entry-dates">{res.startDate}{res.startDate && res.endDate ? ' – ' : ''}{res.endDate}</span>
+                    </div>
+                    {res.title && <p className="rp-entry-sub">{res.title}</p>}
+                    {res.description && (
+                      <ul className="rp-entry-bullets">
+                        {res.description.split('\n').filter(l => l.trim()).map((line, li) => (
+                          <li key={li}>{line.trim()}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Skills — rendered as clean inline dot-separated list */}
             {skills.length > 0 && (
               <div className="rp-section">
                 <p className="rp-section-title">Skills</p>
-                <div className="rp-skills-list">
-                  {skills.map(s => <span key={s} className="rp-skill-chip">{s}</span>)}
-                </div>
+                <p className="rp-skills-inline">{skills.join(' · ')}</p>
               </div>
             )}
 

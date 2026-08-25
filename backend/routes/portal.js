@@ -162,13 +162,14 @@ router.get('/jobs/company/:company_id', async (req, res) => {
 // POST: Create or update a student's resume (upsert by student_id)
 router.post('/resume', async (req, res) => {
     try {
-        const { student_id, full_name, email, phone, summary, education, experience, skills, links, include_projects } = req.body;
+        const { student_id, full_name, email, phone, summary, education, experience, research, skills, links, include_projects } = req.body;
         const [resume, created] = await Resume.findOrCreate({
             where: { student_id },
             defaults: {
                 full_name, email, phone, summary,
                 education: JSON.stringify(education),
                 experience: JSON.stringify(experience),
+                research: JSON.stringify(research),
                 skills: JSON.stringify(skills),
                 links: JSON.stringify(links),
                 include_projects
@@ -179,6 +180,7 @@ router.post('/resume', async (req, res) => {
                 full_name, email, phone, summary,
                 education: JSON.stringify(education),
                 experience: JSON.stringify(experience),
+                research: JSON.stringify(research),
                 skills: JSON.stringify(skills),
                 links: JSON.stringify(links),
                 include_projects
@@ -200,6 +202,7 @@ router.get('/resume/:student_id', async (req, res) => {
             ...resume.toJSON(),
             education: JSON.parse(resume.education || '[]'),
             experience: JSON.parse(resume.experience || '[]'),
+            research: JSON.parse(resume.research || '[]'),
             skills: JSON.parse(resume.skills || '[]'),
             links: JSON.parse(resume.links || '{}')
         });
