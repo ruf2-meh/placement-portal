@@ -110,21 +110,20 @@ router.get('/:id/match', authMiddleware, getJobSkillMatch);
 
 // POST: Create a job posting
 router.post('/', async (req, res) => {
-<<<<<<< HEAD
     const { 
+        company,
         company_id, 
         title, 
         description, 
         requirements, 
         location, 
         deadline,
-        min_cgpa,            // <-- ADDED
-        max_backlogs,        // <-- ADDED
-        allowed_departments  // <-- ADDED
+        min_cgpa,
+        max_backlogs,
+        allowed_departments 
     } = req.body;
-=======
-    const { company, title, description, requirements, location, deadline } = req.body;
->>>>>>> main
+
+    const companyRef = company || company_id;
 
     if (!title || !description || !deadline) {
         return res.status(400).json({ message: "Please fill out all required fields." });
@@ -132,7 +131,7 @@ router.post('/', async (req, res) => {
 
     try {
         const newJob = await Job.create({
-            company,
+            company: companyRef,
             title,
             description,
             requirements,
@@ -143,17 +142,14 @@ router.post('/', async (req, res) => {
             allowed_departments: allowed_departments || null
         });
 
-<<<<<<< HEAD
-        res.status(201).json({ message: "Job posted successfully!", jobId: newJob.id });
-=======
-        res.status(201).json({ 
+        return res.status(201).json({ 
             message: "Job posted successfully!", 
             jobId: newJob._id 
         });
->>>>>>> main
+
     } catch (err) {
         console.error("Error creating job:", err);
-        res.status(500).json({ message: "Failed to post job." });
+        return res.status(500).json({ message: "Failed to post job." });
     }
 });
 
