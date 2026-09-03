@@ -20,6 +20,15 @@ const studentProfileSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  full_name: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  bio: {
+    type: String,
+    default: ''
+  },
   phone: {
     type: String,
     default: ''

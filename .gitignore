@@ -1,9 +1,6 @@
-<<<<<<< HEAD
 node_modules/
 .env
-=======
-
-node_modules/
 backend/node_modules/
 frontend/node_modules/
->>>>>>> main
+backend/.env
+backend/database.sqlite

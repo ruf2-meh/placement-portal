@@ -1,13 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const { Op } = require('sequelize');
+const mongoose = require('mongoose');
 
 // --- Models ---
 const Job = require('../models/Job');
 const Project = require('../models/Project');
 const Application = require('../models/Application');
 const Notification = require('../models/Notification');
-const StudentProfile = require('../models/StudentProfile'); 
+const StudentProfile = require('../models/StudentProfile');
+
+// -----------------------------------------------------------------------------
+// HELPERS
+// -----------------------------------------------------------------------------
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 // =========================================================================
 // FEATURE 9: Student Project Showcase Profile
@@ -16,28 +21,51 @@ const StudentProfile = require('../models/StudentProfile');
 // POST: Add a student project
 router.post('/projects', async (req, res) => {
     try {
-        const { student_id, title, description, link, tech_stack } = req.body;
+        // Accept both the legacy snake_case field names this route used to
+        // expect and the camelCase names the Project model / frontend form
+        // actually use, so neither existing callers nor the model break.
+        const {
+            student_id, student,
+            title,
+            description,
+            link, projectUrl, project_url,
+            tech_stack, techStack,
+            githubUrl, github_url
+        } = req.body;
 
-        if (!student_id || !title) {
+        const studentRef = student || student_id;
+
+        if (!studentRef || !title) {
             return res.status(400).json({
                 message: 'Student ID and project title are required.'
             });
         }
 
-        const project = await Project.create({ 
-            student_id, 
-            title, 
-            description, 
-            link, 
-            tech_stack 
+        if (!isValidId(studentRef)) {
+            return res.status(400).json({ message: 'Invalid student ID.' });
+        }
+
+        const project = await Project.create({
+            student: studentRef,
+            title,
+            description,
+            projectUrl: projectUrl || project_url || link || '',
+            techStack: techStack || tech_stack || '',
+            githubUrl: githubUrl || github_url || ''
         });
 
-        return res.status(201).json({ 
-            message: "Project added successfully!", 
-            project 
+        return res.status(201).json({
+            message: "Project added successfully!",
+            project
         });
     } catch (err) {
         console.error('Error adding project:', err);
+
+        if (err.name === 'ValidationError') {
+            const messages = Object.values(err.errors).map((val) => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
+
         return res.status(500).json({ message: 'Error adding project.' });
     }
 });
@@ -45,10 +73,13 @@ router.post('/projects', async (req, res) => {
 // GET: Get a specific student's projects
 router.get('/projects/:student_id', async (req, res) => {
     try {
-        const projects = await Project.findAll({
-            where: { student_id: req.params.student_id },
-            order: [['createdAt', 'DESC']]
-        });
+        const { student_id } = req.params;
+
+        if (!isValidId(student_id)) {
+            return res.status(400).json({ message: 'Invalid student ID.' });
+        }
+
+        const projects = await Project.find({ student: student_id }).sort({ createdAt: -1 });
 
         return res.status(200).json(projects);
     } catch (err) {
@@ -60,17 +91,39 @@ router.get('/projects/:student_id', async (req, res) => {
 // PUT: Edit an existing student project
 router.put('/projects/:id', async (req, res) => {
     try {
-        const { title, description, link, tech_stack } = req.body;
-        const project = await Project.findByPk(req.params.id);
-        
+        const { id } = req.params;
+
+        if (!isValidId(id)) {
+            return res.status(400).json({ message: 'Invalid project ID.' });
+        }
+
+        const { title, description, link, projectUrl, project_url, tech_stack, techStack, githubUrl, github_url } = req.body;
+
+        const project = await Project.findById(id);
+
         if (!project) {
             return res.status(404).json({ message: "Project not found." });
         }
-        
-        await project.update({ title, description, link, tech_stack });
+
+        if (title !== undefined) project.title = title;
+        if (description !== undefined) project.description = description;
+        const resolvedProjectUrl = projectUrl || project_url || link;
+        if (resolvedProjectUrl !== undefined) project.projectUrl = resolvedProjectUrl;
+        const resolvedTechStack = techStack || tech_stack;
+        if (resolvedTechStack !== undefined) project.techStack = resolvedTechStack;
+        const resolvedGithubUrl = githubUrl || github_url;
+        if (resolvedGithubUrl !== undefined) project.githubUrl = resolvedGithubUrl;
+
+        await project.save();
         return res.json({ message: "Project updated successfully!", project });
     } catch (err) {
         console.error("Error updating project:", err);
+
+        if (err.name === 'ValidationError') {
+            const messages = Object.values(err.errors).map((val) => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
+
         return res.status(500).json({ message: "Error updating project." });
     }
 });
@@ -78,12 +131,17 @@ router.put('/projects/:id', async (req, res) => {
 // DELETE: Remove a student project
 router.delete('/projects/:id', async (req, res) => {
     try {
-        const project = await Project.findByPk(req.params.id);
+        const { id } = req.params;
+
+        if (!isValidId(id)) {
+            return res.status(400).json({ message: 'Invalid project ID.' });
+        }
+
+        const project = await Project.findByIdAndDelete(id);
         if (!project) {
             return res.status(404).json({ message: "Project not found." });
         }
-        
-        await project.destroy();
+
         return res.json({ message: "Project deleted successfully!" });
     } catch (err) {
         console.error("Error deleting project:", err);
@@ -99,22 +157,19 @@ router.delete('/projects/:id', async (req, res) => {
 router.get('/jobs/search', async (req, res) => {
     try {
         const { keyword } = req.query;
-        let whereClause = {};
+        let filter = {};
 
         if (keyword && keyword.trim()) {
-            const searchTerm = `%${keyword.trim()}%`;
-            whereClause = {
-                [Op.or]: [
-                    { title: { [Op.like]: searchTerm } },
-                    { location: { [Op.like]: searchTerm } }
+            const term = keyword.trim();
+            filter = {
+                $or: [
+                    { title: { $regex: term, $options: 'i' } },
+                    { location: { $regex: term, $options: 'i' } }
                 ]
             };
         }
 
-        const jobs = await Job.findAll({
-            where: whereClause,
-            order: [['createdAt', 'DESC']]
-        });
+        const jobs = await Job.find(filter).sort({ createdAt: -1 });
 
         return res.status(200).json(jobs);
     } catch (err) {
@@ -137,7 +192,11 @@ router.post('/jobs/apply', async (req, res) => {
             });
         }
 
-        const job = await Job.findByPk(job_id);
+        if (!isValidId(job_id) || !isValidId(student_id)) {
+            return res.status(400).json({ message: 'Invalid job or student ID.' });
+        }
+
+        const job = await Job.findById(job_id);
 
         if (!job) {
             return res.status(404).json({ message: 'Job not found.' });
@@ -162,10 +221,8 @@ router.post('/jobs/apply', async (req, res) => {
         }
 
         const existingApplication = await Application.findOne({
-            where: {
-                job_id: job_id,
-                student_id: student_id
-            }
+            job: job_id,
+            student: student_id
         });
 
         if (existingApplication) {
@@ -175,21 +232,21 @@ router.post('/jobs/apply', async (req, res) => {
         }
 
         const application = await Application.create({
-            job_id: job_id,
-            student_id: student_id
+            job: job_id,
+            student: student_id
         });
 
-        // Notify the company if company_id exists
-        if (job.company_id) {
+        // Notify the company if the job has one attached
+        if (job.company) {
             await Notification.create({
-                user_id: job.company_id,
+                user: job.company,
                 message: `A student has applied for your job: "${job.title}".`
             });
         }
 
         // Notify the student
         await Notification.create({
-            user_id: student_id,
+            user: student_id,
             message: `Your application for "${job.title}" was submitted successfully.`
         });
 
@@ -209,10 +266,13 @@ router.post('/jobs/apply', async (req, res) => {
 
 router.get('/notifications/:user_id', async (req, res) => {
     try {
-        const notifications = await Notification.findAll({
-            where: { user_id: req.params.user_id },
-            order: [['createdAt', 'DESC']]
-        });
+        const { user_id } = req.params;
+
+        if (!isValidId(user_id)) {
+            return res.status(400).json({ message: 'Invalid user ID.' });
+        }
+
+        const notifications = await Notification.find({ user: user_id }).sort({ createdAt: -1 });
 
         return res.status(200).json(notifications);
     } catch (err) {
@@ -223,11 +283,15 @@ router.get('/notifications/:user_id', async (req, res) => {
 
 router.get('/notifications/:user_id/unread-count', async (req, res) => {
     try {
-        const unreadCount = await Notification.count({
-            where: {
-                user_id: req.params.user_id,
-                is_read: false
-            }
+        const { user_id } = req.params;
+
+        if (!isValidId(user_id)) {
+            return res.status(400).json({ message: 'Invalid user ID.' });
+        }
+
+        const unreadCount = await Notification.countDocuments({
+            user: user_id,
+            is_read: false
         });
 
         return res.status(200).json({ unreadCount });
@@ -240,16 +304,19 @@ router.get('/notifications/:user_id/unread-count', async (req, res) => {
 router.patch('/notifications/:notification_id/read', async (req, res) => {
     try {
         const { user_id } = req.body;
+        const { notification_id } = req.params;
 
         if (!user_id) {
             return res.status(400).json({ message: 'User ID is required.' });
         }
 
+        if (!isValidId(notification_id) || !isValidId(user_id)) {
+            return res.status(400).json({ message: 'Invalid notification or user ID.' });
+        }
+
         const notification = await Notification.findOne({
-            where: {
-                id: req.params.notification_id,
-                user_id: user_id
-            }
+            _id: notification_id,
+            user: user_id
         });
 
         if (!notification) {
@@ -271,19 +338,20 @@ router.patch('/notifications/:notification_id/read', async (req, res) => {
 
 router.patch('/notifications/:user_id/read-all', async (req, res) => {
     try {
-        const [updatedCount] = await Notification.update(
-            { is_read: true },
-            {
-                where: {
-                    user_id: req.params.user_id,
-                    is_read: false
-                }
-            }
+        const { user_id } = req.params;
+
+        if (!isValidId(user_id)) {
+            return res.status(400).json({ message: 'Invalid user ID.' });
+        }
+
+        const result = await Notification.updateMany(
+            { user: user_id, is_read: false },
+            { $set: { is_read: true } }
         );
 
         return res.status(200).json({
             message: 'All notifications marked as read.',
-            updatedCount
+            updatedCount: result.modifiedCount
         });
     } catch (err) {
         console.error('Error updating notifications:', err);
@@ -297,10 +365,13 @@ router.patch('/notifications/:user_id/read-all', async (req, res) => {
 
 router.get('/jobs/company/:company_id', async (req, res) => {
     try {
-        const companyJobs = await Job.findAll({
-            where: { company_id: req.params.company_id },
-            order: [['createdAt', 'DESC']]
-        });
+        const { company_id } = req.params;
+
+        if (!isValidId(company_id)) {
+            return res.status(400).json({ message: 'Invalid company ID.' });
+        }
+
+        const companyJobs = await Job.find({ company: company_id }).sort({ createdAt: -1 });
 
         return res.status(200).json(companyJobs);
     } catch (err) {
@@ -315,16 +386,12 @@ router.get('/jobs/company/:company_id', async (req, res) => {
 
 router.get('/stats', async (req, res) => {
     try {
-        const placedCount = await Application.count({
-            distinct: true,
-            col: 'student_id'
-        });
-        
-        const companyCount = await Job.count({
-            distinct: true,
-            col: 'company_id'
-        });
-        
+        const distinctStudents = await Application.distinct('student');
+        const distinctCompanies = await Job.distinct('company');
+
+        const placedCount = distinctStudents.length;
+        const companyCount = distinctCompanies.length;
+
         const finalPlaced = placedCount > 0 ? placedCount : 12;
         const finalCompanies = companyCount > 0 ? companyCount : 5;
         const targetRate = placedCount > 0 ? Math.min(Math.round((finalPlaced / (finalPlaced + 2)) * 100), 100) : 88;
@@ -352,24 +419,26 @@ router.get('/eligibility/:jobId/:studentId', async (req, res) => {
     try {
         const { jobId, studentId } = req.params;
 
-        const job = await Job.findByPk(jobId);
+        if (!isValidId(jobId)) {
+            return res.status(404).json({ eligible: false, message: "Job listing not found." });
+        }
 
-        const student = await StudentProfile.findOne({
-            where: {
-                [Op.or]: [
-                    { user_id: studentId },
-                    { id: studentId }
-                ]
-            }
-        });
+        const job = await Job.findById(jobId);
 
         if (!job) {
             return res.status(404).json({ eligible: false, message: "Job listing not found." });
         }
 
+        let student = null;
+        if (isValidId(studentId)) {
+            // studentId may refer to the User id (StudentProfile.user) directly,
+            // which is the only relationship that exists on the schema.
+            student = await StudentProfile.findOne({ user: studentId });
+        }
+
         if (!student) {
-            return res.json({ 
-                eligible: false, 
+            return res.json({
+                eligible: false,
                 reasons: ["Student profile details not found. Please complete your profile first."],
                 matchPercentage: 0,
                 matchedSkills: [],
@@ -390,7 +459,7 @@ router.get('/eligibility/:jobId/:studentId', async (req, res) => {
                 isEligible = false;
                 checks.push(`CGPA lower than required (Requires: ${minCgpa}, Yours: ${studentCGPA})`);
             } else {
-                checks.push(`CGPA Met (≥ ${minCgpa})`);
+                checks.push(`CGPA Met (>= ${minCgpa})`);
             }
         }
 
@@ -401,34 +470,34 @@ router.get('/eligibility/:jobId/:studentId', async (req, res) => {
                 isEligible = false;
                 checks.push(`Too many active backlogs (Max allowed: ${maxBacklogs}, Yours: ${studentBacklogs})`);
             } else {
-                checks.push(`Backlog Criteria Met (≤ ${maxBacklogs})`);
+                checks.push(`Backlog Criteria Met (<= ${maxBacklogs})`);
             }
         }
 
         // 3. Department / Major Check
         if (job.allowed_departments && job.allowed_departments.trim() !== '') {
-            const studentDept = (student.department || student.major || '').trim().toLowerCase();
-            const allowedList = job.allowed_departments.split(',').map(d => d.trim().toLowerCase());
-            
-            if (!studentDept || !allowedList.some(dept => studentDept.includes(dept) || dept.includes(studentDept))) {
+            const studentDept = (student.department || '').trim().toLowerCase();
+            const allowedList = job.allowed_departments.split(',').map((d) => d.trim().toLowerCase());
+
+            if (!studentDept || !allowedList.some((dept) => studentDept.includes(dept) || dept.includes(studentDept))) {
                 isEligible = false;
-                checks.push(`Department mismatch (Allowed: ${job.allowed_departments}, Yours: ${student.department || student.major || 'N/A'})`);
+                checks.push(`Department mismatch (Allowed: ${job.allowed_departments}, Yours: ${student.department || 'N/A'})`);
             } else {
-                checks.push(`Department Eligible (${student.department || student.major})`);
+                checks.push(`Department Eligible (${student.department})`);
             }
         }
 
         // 4. Skill Matching Logic
-        const extractSkills = (rawString) => {
-            if (!rawString) return [];
-            return rawString
-                .split(',')
-                .map(s => s.trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
+        const extractSkills = (rawSkills) => {
+            if (!rawSkills) return [];
+            const list = Array.isArray(rawSkills) ? rawSkills : String(rawSkills).split(',');
+            return list
+                .map((s) => (typeof s === 'string' ? s.trim().toLowerCase().replace(/[^a-z0-9]/g, '') : ''))
                 .filter(Boolean);
         };
 
         const jobReqRaw = job.requirements || '';
-        const studentSkillsRaw = student.skills || student.tech_stack || '';
+        const studentSkillsRaw = student.skills || [];
 
         const reqSkills = extractSkills(jobReqRaw);
         const studentSkills = extractSkills(studentSkillsRaw);
@@ -436,8 +505,8 @@ router.get('/eligibility/:jobId/:studentId', async (req, res) => {
         const matchedSkills = [];
         const missingSkills = [];
 
-        reqSkills.forEach(reqSkill => {
-            const isMatched = studentSkills.some(studentSkill => 
+        reqSkills.forEach((reqSkill) => {
+            const isMatched = studentSkills.some((studentSkill) =>
                 studentSkill.includes(reqSkill) || reqSkill.includes(studentSkill)
             );
 
@@ -451,7 +520,7 @@ router.get('/eligibility/:jobId/:studentId', async (req, res) => {
         let matchPercentage = 100;
         if (reqSkills.length > 0) {
             matchPercentage = Math.round((matchedSkills.length / reqSkills.length) * 100);
-            
+
             if (matchPercentage < 50) {
                 isEligible = false;
                 checks.push(`Low skill match (${matchPercentage}% - Missing: ${missingSkills.join(', ')})`);
