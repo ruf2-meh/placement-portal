@@ -109,48 +109,59 @@ router.get('/', async (req, res) => {
 router.get('/:id/match', authMiddleware, getJobSkillMatch);
 
 // POST: Create a job posting
-router.post('/', async (req, res) => {
-    const { 
-        company,
-        company_id, 
-        title, 
-        description, 
-        requirements, 
-        location, 
+router.post('/', authMiddleware, async (req, res) => {
+    
+    if (req.user.role !== 'company') {
+        return res.status(403).json({ message: 'Only company accounts can post jobs.' });
+    }
+
+    const {
+        title,
+        description,
+        requirements,
+        location,
         deadline,
         min_cgpa,
         max_backlogs,
-        allowed_departments 
+        allowed_departments
     } = req.body;
-
-    const companyRef = company || company_id;
 
     if (!title || !description || !deadline) {
         return res.status(400).json({ message: "Please fill out all required fields." });
     }
 
+    const parsedDeadline = new Date(deadline);
+    if (Number.isNaN(parsedDeadline.getTime())) {
+        return res.status(400).json({ message: "Please provide a valid application deadline." });
+    }
+
     try {
         const newJob = await Job.create({
-            company: companyRef,
+            company: req.user.id,
             title,
             description,
             requirements,
             location,
-            deadline,
+            deadline: parsedDeadline,
             min_cgpa: min_cgpa ? parseFloat(min_cgpa) : null,
             max_backlogs: max_backlogs !== undefined && max_backlogs !== '' ? parseInt(max_backlogs, 10) : null,
             allowed_departments: allowed_departments || null
         });
 
-        return res.status(201).json({ 
-            message: "Job posted successfully!", 
-            jobId: newJob._id 
+        return res.status(201).json({
+            message: "Job posted successfully!",
+            job: newJob
         });
 
     } catch (err) {
         console.error("Error creating job:", err);
+
+        if (err.name === 'ValidationError') {
+            const messages = Object.values(err.errors).map((val) => val.message);
+            return res.status(400).json({ message: messages.join(', ') });
+        }
+
         return res.status(500).json({ message: "Failed to post job." });
     }
 });
-
 module.exports = router;
