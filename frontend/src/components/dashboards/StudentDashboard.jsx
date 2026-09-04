@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import API from '../../api/axios';
 import YourCompatibilityWidget from '../YourCompatibilityWidget';
 import DashboardHeader from '../DashboardHeader';
+import ProfileCompletion from '../ProfileCompletion';
 
 // Reads the logged-in student's own id from what Login.jsx stored at login
 // time. Several fetches below need this (applications, notifications,
@@ -33,6 +34,10 @@ const StudentDashboard = () => {
     // Search and Filter state
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
+
+    // Profile form visibility
+    const [showProfileForm, setShowProfileForm] = useState(false);
+
 
     // Portfolio Form State
     const [newProject, setNewProject] = useState({
@@ -194,8 +199,30 @@ const StudentDashboard = () => {
 
                 {/* MAIN TWO-COLUMN GRID */}
                 <div style={styles.gridContainer}>
+
                     {/* LEFT COLUMN: SEARCH & JOBS */}
                     <div style={styles.leftCol}>
+                        <div style={styles.sectionCard}>
+                            <div style={styles.sectionHeader}>
+                                <div>
+                                    <h2 style={styles.sectionTitle}>👤 Your Profile</h2>
+                                    <p style={styles.sectionSub}>Keep your skills, CGPA, and backlogs up to date — this is what compatibility scores and eligibility checks are based on.</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowProfileForm((prev) => !prev)}
+                                    style={{ ...styles.countBadge, border: 'none', cursor: 'pointer' }}
+                                >
+                                    {showProfileForm ? 'Hide' : 'Edit Profile'}
+                                </button>
+                            </div>
+                            {showProfileForm && (
+                                <ProfileCompletion
+                                    userId={getStoredUserId()}
+                                    onProfileSaved={() => setShowProfileForm(false)}
+                                />
+                            )}
+                        </div>
+
                         <div style={styles.sectionCard}>
                             <div style={styles.sectionHeader}>
                                 <div>

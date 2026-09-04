@@ -3,52 +3,11 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const Job = require('../models/Job');
 const User = require('../models/User');
+const StudentProfile = require('../models/StudentProfile');
 const Application = require('../models/Application');
 const Notification = require('../models/Notification');
 const authMiddleware = require('../middleware/authMiddleware');
-
-// -----------------------------------------------------------------------------
-// HELPER FUNCTIONS
-// -----------------------------------------------------------------------------
-const calculateSkillMatch = (userSkillsInput, jobRequirementsInput) => {
-    const jobRequirements = Array.isArray(jobRequirementsInput)
-        ? jobRequirementsInput
-        : (jobRequirementsInput || '').split(',').map(s => s.trim()).filter(Boolean);
-
-    const userSkills = Array.isArray(userSkillsInput)
-        ? userSkillsInput
-        : (userSkillsInput || '').split(',').map(s => s.trim()).filter(Boolean);
-
-    if (jobRequirements.length === 0) {
-        return {
-            matchPercentage: 100,
-            matchedSkills: [],
-            missingSkills: [],
-            requiredSkillCount: 0
-        };
-    }
-
-    const userSkillsSet = new Set(userSkills.map(s => s.toLowerCase()));
-    const matchedSkills = [];
-    const missingSkills = [];
-
-    jobRequirements.forEach(reqSkill => {
-        if (userSkillsSet.has(reqSkill.toLowerCase())) {
-            matchedSkills.push(reqSkill);
-        } else {
-            missingSkills.push(reqSkill);
-        }
-    });
-
-    const matchPercentage = Math.round((matchedSkills.length / jobRequirements.length) * 100);
-
-    return {
-        matchPercentage,
-        matchedSkills,
-        missingSkills,
-        requiredSkillCount: jobRequirements.length
-    };
-};
+const { calculateSkillMatch, normalizeSkillList } = require('../utils/skillMatcher');
 
 // -----------------------------------------------------------------------------
 // CONTROLLER LOGIC
@@ -60,24 +19,28 @@ const calculateSkillMatch = (userSkillsInput, jobRequirementsInput) => {
 const getJobSkillMatch = async (req, res) => {
     try {
         const jobId = req.params.id;
-        const studentId = req.user.id || req.user._id;
+        const studentId = req.user.id;
 
-        const [job, student] = await Promise.all([
+        const [job, studentProfile] = await Promise.all([
             Job.findById(jobId),
-            User.findById(studentId)
+            StudentProfile.findOne({ user: studentId })
         ]);
 
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job opportunity not found.' });
         }
-        if (!student) {
-            return res.status(404).json({ success: false, message: 'Student profile not found.' });
+        if (!studentProfile) {
+            return res.status(404).json({ success: false, message: 'Please complete your student profile to see your compatibility score.' });
         }
 
-        const jobRequirements = job.requirements || job.skills || "";
-        const studentSkills = student.skills || student.keySkills || [];
+        // Prefer the structured requiredSkills array; fall back to parsing
+        // the free-text requirements field for jobs created before
+        // requiredSkills existed.
+        const jobSkillSource = (job.requiredSkills && job.requiredSkills.length > 0)
+            ? job.requiredSkills
+            : job.requirements;
 
-        const matchResult = calculateSkillMatch(studentSkills, jobRequirements);
+        const matchResult = calculateSkillMatch(studentProfile.skills, jobSkillSource);
 
         return res.status(200).json({
             success: true,
@@ -112,6 +75,17 @@ router.get('/', async (req, res) => {
 router.get('/:id/match', authMiddleware, getJobSkillMatch);
 
 // POST: Create a job posting
+//
+// Previously this route had no authMiddleware at all, and trusted a
+// company/company_id field sent directly in the request body — meaning
+// any caller (authenticated or not) could create a job under any
+// company's identity. It also meant CompanyDashboard.jsx's own form
+// (which never sent a company field) was silently failing Mongoose's
+// required-field validation on every submission, and the frontend was
+// masking that failure with a fake "Local Mode" success message.
+//
+// The company is now always taken from the verified JWT (req.user.id),
+// never from the request body.
 router.post('/', authMiddleware, async (req, res) => {
     if (req.user.role !== 'company') {
         return res.status(403).json({ message: 'Only company accounts can post jobs.' });
@@ -151,11 +125,17 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     try {
+        // Derive the structured requiredSkills array from the free-text
+        // requirements field using the same normalization the skill matcher
+        // itself uses, so what's stored and what's matched can never drift.
+        const requiredSkills = Array.from(normalizeSkillList(requirements).values());
+
         const newJob = await Job.create({
             company: req.user.id,
             title,
             description,
             requirements,
+            requiredSkills,
             location,
             jobType: jobType || null,
             paymentType: paymentType || null,
@@ -181,6 +161,7 @@ router.post('/', authMiddleware, async (req, res) => {
         return res.status(500).json({ message: "Failed to post job." });
     }
 });
+
 // -----------------------------------------------------------------------------
 // POST: Apply to a job
 //
