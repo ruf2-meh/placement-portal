@@ -110,7 +110,6 @@ router.get('/:id/match', authMiddleware, getJobSkillMatch);
 
 // POST: Create a job posting
 router.post('/', authMiddleware, async (req, res) => {
-    
     if (req.user.role !== 'company') {
         return res.status(403).json({ message: 'Only company accounts can post jobs.' });
     }
@@ -120,6 +119,8 @@ router.post('/', authMiddleware, async (req, res) => {
         description,
         requirements,
         location,
+        jobType,
+        paymentType,
         deadline,
         min_cgpa,
         max_backlogs,
@@ -128,6 +129,17 @@ router.post('/', authMiddleware, async (req, res) => {
 
     if (!title || !description || !deadline) {
         return res.status(400).json({ message: "Please fill out all required fields." });
+    }
+
+    const validJobTypes = ['Remote', 'On-site', 'Hybrid'];
+    const validPaymentTypes = ['Paid', 'Unpaid'];
+
+    if (jobType && !validJobTypes.includes(jobType)) {
+        return res.status(400).json({ message: `Job type must be one of: ${validJobTypes.join(', ')}` });
+    }
+
+    if (paymentType && !validPaymentTypes.includes(paymentType)) {
+        return res.status(400).json({ message: `Payment type must be one of: ${validPaymentTypes.join(', ')}` });
     }
 
     const parsedDeadline = new Date(deadline);
@@ -142,6 +154,8 @@ router.post('/', authMiddleware, async (req, res) => {
             description,
             requirements,
             location,
+            jobType: jobType || null,
+            paymentType: paymentType || null,
             deadline: parsedDeadline,
             min_cgpa: min_cgpa ? parseFloat(min_cgpa) : null,
             max_backlogs: max_backlogs !== undefined && max_backlogs !== '' ? parseInt(max_backlogs, 10) : null,

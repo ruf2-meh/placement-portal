@@ -15,6 +15,8 @@ const CompanyDashboard = () => {
         description: '',
         requirements: '',
         location: '',
+        jobType: '',
+        paymentType: '',
         deadline: ''
     });
 
@@ -80,6 +82,8 @@ const CompanyDashboard = () => {
             description: formData.description.trim(),
             requirements: formData.requirements.trim() || 'N/A',
             location: formData.location.trim() || 'Remote',
+            jobType: formData.jobType || null,
+            paymentType: formData.paymentType || null,
             deadline: formData.deadline
         };
 
@@ -88,7 +92,7 @@ const CompanyDashboard = () => {
             const createdJob = res.data?.job || res.data;
 
             setJobPosts((prev) => [createdJob, ...prev]);
-            setFormData({ title: '', description: '', requirements: '', location: '', deadline: '' });
+            setFormData({ title: '', description: '', requirements: '', location: '', jobType: '', paymentType: '', deadline: '' });
             setFeedbackMsg({ type: 'success', text: '🎉 Opportunity published successfully!' });
         } catch (err) {
             console.error('Error publishing job:', err);
@@ -171,7 +175,7 @@ const CompanyDashboard = () => {
                                 </div>
                             )}
 
-                            <form onSubmit={handlePublishJob} style={styles.form}>
+                                                        <form onSubmit={handlePublishJob} style={styles.form}>
                                 <div style={styles.fieldGroup}>
                                     <label style={styles.label}>Job Title <span style={styles.required}>*</span></label>
                                     <input 
@@ -219,6 +223,36 @@ const CompanyDashboard = () => {
                                             placeholder="e.g. Remote / On-site" 
                                             style={styles.input} 
                                         />
+                                    </div>
+                                </div>
+
+                                <div style={styles.twoCol}>
+                                    <div style={styles.fieldGroup}>
+                                        <label style={styles.label}>Job Type</label>
+                                        <select
+                                            name="jobType"
+                                            value={formData.jobType}
+                                            onChange={handleInputChange}
+                                            style={styles.input}
+                                        >
+                                            <option value="">-- Not specified --</option>
+                                            <option value="Remote">Remote</option>
+                                            <option value="On-site">On-site</option>
+                                            <option value="Hybrid">Hybrid</option>
+                                        </select>
+                                    </div>
+                                    <div style={styles.fieldGroup}>
+                                        <label style={styles.label}>Payment Type</label>
+                                        <select
+                                            name="paymentType"
+                                            value={formData.paymentType}
+                                            onChange={handleInputChange}
+                                            style={styles.input}
+                                        >
+                                            <option value="">-- Not specified --</option>
+                                            <option value="Paid">Paid</option>
+                                            <option value="Unpaid">Unpaid</option>
+                                        </select>
                                     </div>
                                 </div>
 

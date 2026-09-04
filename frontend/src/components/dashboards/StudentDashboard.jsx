@@ -71,10 +71,17 @@ const StudentDashboard = () => {
 
             if (activeFilter === 'All') return matchesSearch;
 
-            const loc = (j.location || '').toLowerCase();
-            const type = (j.type || j.jobType || '').toLowerCase();
-            const target = activeFilter.toLowerCase();
-            const matchesFilter = loc.includes(target) || type.includes(target);
+            const paymentFilters = ['Paid', 'Unpaid'];
+            let matchesFilter;
+
+            if (paymentFilters.includes(activeFilter)) {
+                matchesFilter = (j.paymentType || '').toLowerCase() === activeFilter.toLowerCase();
+            } else {
+                const jobType = (j.jobType || '').toLowerCase();
+                const loc = (j.location || '').toLowerCase();
+                const target = activeFilter.toLowerCase();
+                matchesFilter = jobType === target || loc.includes(target);
+            }
 
             return matchesSearch && matchesFilter;
         });
