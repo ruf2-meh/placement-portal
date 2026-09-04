@@ -1,17 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:5000/api';
+import API from '../api/axios';
 
 const YourCompatibilityWidget = ({ jobId }) => {
     const [matchData, setMatchData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-
-    const getAuthHeader = () => {
-        const token = localStorage.getItem('token');
-        return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-    };
 
     useEffect(() => {
         if (!jobId) return;
@@ -20,7 +13,7 @@ const YourCompatibilityWidget = ({ jobId }) => {
             setLoading(true);
             setError('');
             try {
-                const response = await axios.get(`${API_BASE_URL}/jobs/${jobId}/match`, getAuthHeader());
+                const response = await API.get(`/jobs/${jobId}/match`);
                 if (response.data && response.data.success !== false) {
                     setMatchData(response.data);
                 }

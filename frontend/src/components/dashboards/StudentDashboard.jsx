@@ -3,6 +3,7 @@ import API from '../../api/axios';
 import YourCompatibilityWidget from '../YourCompatibilityWidget';
 import DashboardHeader from '../DashboardHeader';
 import ProfileCompletion from '../ProfileCompletion';
+import SkillGapAnalyzer from '../SkillGapAnalyzer';
 
 // Reads the logged-in student's own id from what Login.jsx stored at login
 // time. Several fetches below need this (applications, notifications,
@@ -284,6 +285,7 @@ const StudentDashboard = () => {
                                             </div>
 
                                             <YourCompatibilityWidget jobId={jobId} />
+                                            <SkillGapAnalyzer jobId={jobId} />
 
                                             <button 
                                                 onClick={() => handleApply(jobId)} 
