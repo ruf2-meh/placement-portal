@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Job = require('../models/Job');
 const User = require('../models/User');
+const Application = require('../models/Application');
+const Notification = require('../models/Notification');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // -----------------------------------------------------------------------------
@@ -178,4 +181,82 @@ router.post('/', authMiddleware, async (req, res) => {
         return res.status(500).json({ message: "Failed to post job." });
     }
 });
+// -----------------------------------------------------------------------------
+// POST: Apply to a job
+//
+// StudentDashboard.jsx already calls this exact route
+// (API.post(`/jobs/${jobId}/apply`), no request body) — it was previously
+// calling a route that didn't exist. The student is taken from the
+// authenticated token, not from any client-supplied field, so a student
+// can only ever apply as themselves.
+// -----------------------------------------------------------------------------
+router.post('/:id/apply', authMiddleware, async (req, res) => {
+    if (req.user.role !== 'student') {
+        return res.status(403).json({ message: 'Only student accounts can apply to jobs.' });
+    }
+
+    const jobId = req.params.id;
+    const studentId = req.user.id;
+
+    if (!mongoose.Types.ObjectId.isValid(jobId)) {
+        return res.status(400).json({ message: 'Invalid job ID.' });
+    }
+
+    try {
+        const job = await Job.findById(jobId);
+
+        if (!job) {
+            return res.status(404).json({ message: 'Job not found.' });
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const deadline = new Date(job.deadline);
+        deadline.setHours(23, 59, 59, 999);
+
+        if (Number.isNaN(deadline.getTime())) {
+            return res.status(400).json({ message: 'This job has an invalid application deadline.' });
+        }
+
+        if (deadline < today) {
+            return res.status(400).json({ message: 'The deadline for this job posting has passed.' });
+        }
+
+        const existingApplication = await Application.findOne({
+            job: jobId,
+            student: studentId
+        });
+
+        if (existingApplication) {
+            return res.status(400).json({ message: 'You have already applied to this position.' });
+        }
+
+        const application = await Application.create({
+            job: jobId,
+            student: studentId
+        });
+
+        if (job.company) {
+            await Notification.create({
+                user: job.company,
+                message: `A student has applied for your job: "${job.title}".`
+            });
+        }
+
+        await Notification.create({
+            user: studentId,
+            message: `Your application for "${job.title}" was submitted successfully.`
+        });
+
+        return res.status(201).json({
+            message: 'Application submitted successfully!',
+            application
+        });
+    } catch (err) {
+        console.error('Error submitting application:', err);
+        return res.status(500).json({ message: 'Failed to submit application.' });
+    }
+});
+
 module.exports = router;

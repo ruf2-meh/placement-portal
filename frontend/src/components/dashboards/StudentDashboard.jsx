@@ -3,6 +3,20 @@ import API from '../../api/axios';
 import YourCompatibilityWidget from '../YourCompatibilityWidget';
 import DashboardHeader from '../DashboardHeader';
 
+// Reads the logged-in student's own id from what Login.jsx stored at login
+// time. Several fetches below need this (applications, notifications,
+// projects) — previously none of them had any way to know who "you" were,
+// so they were all called without an id and silently failed.
+const getStoredUserId = () => {
+    try {
+        const storedUser = localStorage.getItem('user');
+        return storedUser ? JSON.parse(storedUser)?.id : null;
+    } catch (e) {
+        console.error('Failed to parse stored user', e);
+        return null;
+    }
+};
+
 const StudentDashboard = () => {
     // --- State Variables ---
     const [user, setUser] = useState(null);
@@ -33,13 +47,16 @@ const StudentDashboard = () => {
         const fetchDashboardData = async () => {
             try {
                 setLoading(true);
-                
+
+                const studentId = getStoredUserId();
+                const noId = Promise.reject(new Error('No student ID available'));
+
                 const [userRes, jobsRes, appsRes, notifsRes, projectsRes] = await Promise.allSettled([
                     API.get('/auth/me'),
                     API.get('/jobs'),
-                    API.get('/portal/applications'),
-                    API.get('/portal/notifications'),
-                    API.get('/portal/projects')
+                    studentId ? API.get(`/portal/applications/${studentId}`) : noId,
+                    studentId ? API.get(`/portal/notifications/${studentId}`) : noId,
+                    studentId ? API.get(`/portal/projects/${studentId}`) : noId
                 ]);
 
                 if (userRes.status === 'fulfilled') setUser(userRes.value.data);
@@ -98,9 +115,12 @@ const StudentDashboard = () => {
             setApplyingId(jobId);
             await API.post(`/jobs/${jobId}/apply`);
             alert("Application submitted successfully!");
-            
-            const appsRes = await API.get('/portal/applications');
-            setApplications(appsRes.data || []);
+
+            const studentId = getStoredUserId();
+            if (studentId) {
+                const appsRes = await API.get(`/portal/applications/${studentId}`);
+                setApplications(appsRes.data || []);
+            }
         } catch (err) {
             alert(err.response?.data?.message || "Failed to apply for job.");
         } finally {
@@ -111,11 +131,16 @@ const StudentDashboard = () => {
     const handleAddProject = async (e) => {
         e.preventDefault();
         if (!newProject.title.trim()) return alert("Please enter a project title.");
-        
+
+        const studentId = getStoredUserId();
+        if (!studentId) {
+            return alert("Could not identify your account. Please log in again.");
+        }
+
         try {
             setSubmittingProject(true);
-            const res = await API.post('/portal/projects', newProject);
-            setProjects(prev => [...prev, res.data]);
+            const res = await API.post('/portal/projects', { ...newProject, student: studentId });
+            setProjects(prev => [...prev, res.data.project || res.data]);
             setNewProject({ title: '', techStack: '', description: '', link: '' });
         } catch (err) {
             alert("Failed to add project.");
@@ -123,7 +148,6 @@ const StudentDashboard = () => {
             setSubmittingProject(false);
         }
     };
-
     const handleDeleteProject = async (id) => {
         if (!window.confirm("Are you sure you want to delete this project?")) return;
         

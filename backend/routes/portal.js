@@ -261,6 +261,35 @@ router.post('/jobs/apply', async (req, res) => {
 });
 
 // =========================================================================
+// FEATURE 10: Student's Own Applications
+// =========================================================================
+
+// GET: A student's own submitted applications, with job + company details
+// populated so the dashboard can show something meaningful for each one.
+router.get('/applications/:student_id', async (req, res) => {
+    try {
+        const { student_id } = req.params;
+
+        if (!isValidId(student_id)) {
+            return res.status(400).json({ message: 'Invalid student ID.' });
+        }
+
+        const applications = await Application.find({ student: student_id })
+            .populate({
+                path: 'job',
+                select: 'title description location deadline company',
+                populate: { path: 'company', select: 'name email' }
+            })
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json(applications);
+    } catch (err) {
+        console.error('Error fetching applications:', err);
+        return res.status(500).json({ message: 'Error fetching applications.' });
+    }
+});
+
+// =========================================================================
 // FEATURE 23: Notification Dashboard
 // =========================================================================
 
