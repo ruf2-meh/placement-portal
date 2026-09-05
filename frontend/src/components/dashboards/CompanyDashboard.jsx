@@ -340,29 +340,7 @@ const CompanyDashboard = () => {
                             </div>
                         </div>
 
-                        <div style={styles.sideWidgetRow}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span>⚡</span>
-                                <span style={styles.widgetTitleText}>Skill Match Score</span>
-                            </div>
-                            <span style={styles.comingSoonTag}>COMING SOON</span>
-                        </div>
 
-                        <div style={styles.sideWidgetRow}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span>✅</span>
-                                <span style={styles.widgetTitleText}>Eligibility Status</span>
-                            </div>
-                            <span style={styles.comingSoonTag}>COMING SOON</span>
-                        </div>
-
-                        <div style={styles.sideWidgetRow}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span>📄</span>
-                                <span style={styles.widgetTitleText}>Resume Builder</span>
-                            </div>
-                            <span style={styles.comingSoonTag}>COMING SOON</span>
-                        </div>
                     </div>
                 </div>
             </main>
