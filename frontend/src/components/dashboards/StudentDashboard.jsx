@@ -27,7 +27,8 @@ const StudentDashboard = () => {
     const [notifications, setNotifications] = useState([]);
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
-    
+    const [interviews, setInterviews] = useState([]);
+
     // UI Action States
     const [applyingId, setApplyingId] = useState(null);
     const [submittingProject, setSubmittingProject] = useState(false);
@@ -57,12 +58,13 @@ const StudentDashboard = () => {
                 const studentId = getStoredUserId();
                 const noId = Promise.reject(new Error('No student ID available'));
 
-                const [userRes, jobsRes, appsRes, notifsRes, projectsRes] = await Promise.allSettled([
+                const [userRes, jobsRes, appsRes, notifsRes, projectsRes, interviewsRes] = await Promise.allSettled([
                     API.get('/auth/me'),
                     API.get('/jobs'),
                     studentId ? API.get(`/portal/applications/${studentId}`) : noId,
                     studentId ? API.get(`/portal/notifications/${studentId}`) : noId,
-                    studentId ? API.get(`/portal/projects/${studentId}`) : noId
+                    studentId ? API.get(`/portal/projects/${studentId}`) : noId,
+                    API.get('/interviews/student')
                 ]);
 
                 if (userRes.status === 'fulfilled') setUser(userRes.value.data);
@@ -73,6 +75,8 @@ const StudentDashboard = () => {
                 if (appsRes.status === 'fulfilled') setApplications(appsRes.value.data || []);
                 if (notifsRes.status === 'fulfilled') setNotifications(notifsRes.value.data || []);
                 if (projectsRes.status === 'fulfilled') setProjects(projectsRes.value.data || []);
+                if (interviewsRes.status === 'fulfilled') setInterviews(interviewsRes.value.data || []);
+
 
             } catch (err) {
                 console.error("Error loading dashboard data:", err);
@@ -405,6 +409,66 @@ const StudentDashboard = () => {
                                         </div>
                                     );
                                 })
+                            )}
+                        </div>
+
+                        {/* MY INTERVIEWS (Feature 14) — read-only for students;
+                            status changes are company-controlled */}
+                        <div style={styles.sectionCard}>
+                            <div style={styles.sectionHeader}>
+                                <div>
+                                    <h2 style={styles.sectionTitle}>🗓️ My Interviews</h2>
+                                    <p style={styles.sectionSub}>Interviews scheduled by companies for your applications</p>
+                                </div>
+                                <span style={styles.countBadge}>{interviews.length}</span>
+                            </div>
+
+                            {interviews.length === 0 ? (
+                                <p style={{ color: '#64748b', fontSize: '14px' }}>No interviews scheduled yet.</p>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {interviews.map((interview) => (
+                                        <div key={interview._id} style={styles.jobCard}>
+                                            <h3 style={styles.jobTitle}>{interview.job?.title || 'Job'}</h3>
+                                            <p style={styles.jobDesc}>{interview.company?.name || 'Company'}</p>
+                                            <div style={styles.jobMeta}>
+                                                <span>📅 {new Date(interview.scheduledAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                                                <span>•</span>
+                                                <span>⏱️ {interview.duration || 30} min</span>
+                                                <span>•</span>
+                                                <span>🎥 {interview.interviewType}</span>
+                                            </div>
+                                            {interview.meetingLink && (
+                                                <p style={{ fontSize: '13px' }}>🔗 <a href={interview.meetingLink} target="_blank" rel="noopener noreferrer">{interview.meetingLink}</a></p>
+                                            )}
+                                            {interview.location && (
+                                                <p style={{ fontSize: '13px' }}>📍 {interview.location}</p>
+                                            )}
+                                            {interview.notes && (
+                                                <p style={{ fontSize: '13px', color: '#64748b' }}>📝 {interview.notes}</p>
+                                            )}
+                                            <span style={{
+                                                display: 'inline-block',
+                                                marginTop: '6px',
+                                                padding: '3px 10px',
+                                                borderRadius: '12px',
+                                                fontSize: '11px',
+                                                fontWeight: '700',
+                                                textTransform: 'capitalize',
+                                                backgroundColor:
+                                                    interview.status === 'completed' ? '#dcfce7' :
+                                                    interview.status === 'cancelled' ? '#fee2e2' :
+                                                    interview.status === 'rescheduled' ? '#fef3c7' : '#dbeafe',
+                                                color:
+                                                    interview.status === 'completed' ? '#15803d' :
+                                                    interview.status === 'cancelled' ? '#b91c1c' :
+                                                    interview.status === 'rescheduled' ? '#b45309' : '#1d4ed8'
+                                            }}>
+                                                {interview.status}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
                     </div>

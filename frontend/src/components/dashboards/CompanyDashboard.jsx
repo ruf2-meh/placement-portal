@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
+import InterviewScheduler from '../InterviewScheduler';
 
 const CompanyDashboard = () => {
     const navigate = useNavigate();
@@ -175,7 +176,7 @@ const CompanyDashboard = () => {
                                 </div>
                             )}
 
-                                                        <form onSubmit={handlePublishJob} style={styles.form}>
+                                        <form onSubmit={handlePublishJob} style={styles.form}>
                                 <div style={styles.fieldGroup}>
                                     <label style={styles.label}>Job Title <span style={styles.required}>*</span></label>
                                     <input 
@@ -310,6 +311,8 @@ const CompanyDashboard = () => {
                                 )}
                             </div>
                         </div>
+
+                        <InterviewScheduler />
                     </div>
 
                     {/* Right Side Widgets Column */}

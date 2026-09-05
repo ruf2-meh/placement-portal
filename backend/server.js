@@ -18,6 +18,7 @@ const authRoutes = require('./routes/auth');
 const jobRoutes = require('./routes/jobs');
 const portalRoutes = require('./routes/portal');
 const profileRoutes = require('./routes/profile');
+const interviewRoutes = require('./routes/interviews');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/portal', portalRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/interviews', interviewRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

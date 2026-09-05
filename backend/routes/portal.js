@@ -8,6 +8,8 @@ const Project = require('../models/Project');
 const Application = require('../models/Application');
 const Notification = require('../models/Notification');
 const StudentProfile = require('../models/StudentProfile');
+const authMiddleware = require('../middleware/authMiddleware');
+
 
 // -----------------------------------------------------------------------------
 // HELPERS
@@ -257,6 +259,35 @@ router.post('/jobs/apply', async (req, res) => {
     } catch (err) {
         console.error('Error processing application:', err);
         return res.status(500).json({ message: 'Error processing application.' });
+    }
+});
+
+// =========================================================================
+// FEATURE 14: Company's Applicants (across all its own jobs)
+// =========================================================================
+
+// GET: All applications submitted to jobs posted by the authenticated
+// company, with student + job details populated. This is what lets a
+// company pick who to schedule an interview with. Company identity comes
+// from the verified token, never from a client-supplied ID.
+router.get('/applications/company', authMiddleware, async (req, res) => {
+    if (req.user.role !== 'company') {
+        return res.status(403).json({ message: 'Only company accounts can view this.' });
+    }
+
+    try {
+        const companyJobs = await Job.find({ company: req.user.id }).select('_id');
+        const jobIds = companyJobs.map((job) => job._id);
+
+        const applications = await Application.find({ job: { $in: jobIds } })
+            .populate('job', 'title')
+            .populate('student', 'name email')
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json(applications);
+    } catch (err) {
+        console.error('Error fetching company applications:', err);
+        return res.status(500).json({ message: 'Error fetching applications.' });
     }
 });
 
