@@ -7,14 +7,22 @@ const StudentProfile = require('../models/StudentProfile');
 const Application = require('../models/Application');
 const Notification = require('../models/Notification');
 const authMiddleware = require('../middleware/authMiddleware');
-const { calculateSkillMatch, normalizeSkillList } = require('../utils/skillMatcher');
+const { calculateSkillMatch, normalizeSkillList, calculateGpaFit } = require('../utils/skillMatcher');
+
+// Weights for blending the two sub-scores into one headline compatibility
+// number. Skills matter more than GPA closeness, but GPA still counts.
+const SKILL_WEIGHT = 0.7;
+const GPA_WEIGHT = 0.3;
 
 // -----------------------------------------------------------------------------
 // CONTROLLER LOGIC
 // -----------------------------------------------------------------------------
 
 // @route   GET /api/jobs/:id/match
-// @desc    Get logged-in student's compatibility score for a specific job
+// @desc    Get logged-in student's compatibility score for a specific job.
+//          Returns both a blended headline score (matchPercentage) and the
+//          two sub-scores it's built from (skillMatchPercentage,
+//          gpaFitPercentage), so the UI can show either or both.
 // @access  Private (Student)
 const getJobSkillMatch = async (req, res) => {
     try {
@@ -40,12 +48,29 @@ const getJobSkillMatch = async (req, res) => {
             ? job.requiredSkills
             : job.requirements;
 
-        const matchResult = calculateSkillMatch(studentProfile.skills, jobSkillSource);
+        const skillResult = calculateSkillMatch(studentProfile.skills, jobSkillSource);
+        const gpaResult = calculateGpaFit(studentProfile.cgpa, job.min_cgpa, job.max_cgpa);
+
+        const skillMatchPercentage = skillResult.matchPercentage;
+        const gpaFitPercentage = gpaResult.gpaFitPercentage;
+        const overallCompatibility = Math.round(
+            skillMatchPercentage * SKILL_WEIGHT + gpaFitPercentage * GPA_WEIGHT
+        );
 
         return res.status(200).json({
             success: true,
             jobId: job._id,
-            ...matchResult
+            // Headline blended score — what most of the UI shows front-and-center.
+            matchPercentage: overallCompatibility,
+            // Sub-scores, for the breakdown view.
+            skillMatchPercentage,
+            gpaFitPercentage,
+            gpaMessage: gpaResult.message,
+            matchedSkills: skillResult.matchedSkills,
+            missingSkills: skillResult.missingSkills,
+            studentSkillCount: skillResult.studentSkillCount,
+            requiredSkillCount: skillResult.requiredSkillCount,
+            message: skillResult.message
         });
     } catch (error) {
         console.error('Error in getJobSkillMatch:', error.message);
@@ -100,12 +125,31 @@ router.post('/', authMiddleware, async (req, res) => {
         paymentType,
         deadline,
         min_cgpa,
+        max_cgpa,
         max_backlogs,
         allowed_departments
     } = req.body;
 
     if (!title || !description || !deadline) {
         return res.status(400).json({ message: "Please fill out all required fields." });
+    }
+
+    // CGPA range is required for every new job post — it now feeds directly
+    // into the student-facing compatibility score (GPA Fit %), not just
+    // eligibility, so it can no longer be left blank.
+    if (min_cgpa === undefined || min_cgpa === '' || max_cgpa === undefined || max_cgpa === '') {
+        return res.status(400).json({ message: "Minimum and maximum CGPA are required." });
+    }
+
+    const parsedMinCgpa = parseFloat(min_cgpa);
+    const parsedMaxCgpa = parseFloat(max_cgpa);
+
+    if (Number.isNaN(parsedMinCgpa) || Number.isNaN(parsedMaxCgpa)) {
+        return res.status(400).json({ message: "CGPA values must be valid numbers." });
+    }
+
+    if (parsedMinCgpa >= parsedMaxCgpa) {
+        return res.status(400).json({ message: "Maximum CGPA must be greater than minimum CGPA." });
     }
 
     const validJobTypes = ['Remote', 'On-site', 'Hybrid'];
@@ -140,7 +184,8 @@ router.post('/', authMiddleware, async (req, res) => {
             jobType: jobType || null,
             paymentType: paymentType || null,
             deadline: parsedDeadline,
-            min_cgpa: min_cgpa ? parseFloat(min_cgpa) : null,
+            min_cgpa: parsedMinCgpa,
+            max_cgpa: parsedMaxCgpa,
             max_backlogs: max_backlogs !== undefined && max_backlogs !== '' ? parseInt(max_backlogs, 10) : null,
             allowed_departments: allowed_departments || null
         });

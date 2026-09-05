@@ -291,6 +291,46 @@ router.get('/applications/company', authMiddleware, async (req, res) => {
     }
 });
 
+
+
+// GET: A specific applicant's profile + project portfolio, for a company
+// deciding who to interview/hire. Authorization is checked against real
+// data — a company can only view students who have actually applied to
+// one of its own jobs, not arbitrary student IDs.
+router.get('/applicant-profile/:studentId', authMiddleware, async (req, res) => {
+    if (req.user.role !== 'company') {
+        return res.status(403).json({ message: 'Only company accounts can view this.' });
+    }
+
+    const { studentId } = req.params;
+    if (!isValidId(studentId)) {
+        return res.status(400).json({ message: 'Invalid student ID.' });
+    }
+
+    try {
+        const companyJobs = await Job.find({ company: req.user.id }).select('_id');
+        const jobIds = companyJobs.map((job) => job._id);
+
+        const hasApplied = await Application.exists({ job: { $in: jobIds }, student: studentId });
+        if (!hasApplied) {
+            return res.status(403).json({ message: 'This student has not applied to any of your jobs.' });
+        }
+
+        const [profile, projects] = await Promise.all([
+            StudentProfile.findOne({ user: studentId }),
+            Project.find({ student: studentId }).sort({ createdAt: -1 })
+        ]);
+
+        return res.status(200).json({
+            profile: profile || null,
+            projects: projects || []
+        });
+    } catch (err) {
+        console.error('Error fetching applicant profile:', err);
+        return res.status(500).json({ message: 'Error fetching applicant profile.' });
+    }
+});
+
 // =========================================================================
 // FEATURE 10: Student's Own Applications
 // =========================================================================

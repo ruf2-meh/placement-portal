@@ -74,4 +74,37 @@ const calculateSkillMatch = (studentRawSkills, jobRawRequirements) => {
     };
 };
 
-module.exports = { calculateSkillMatch, normalizeSkillList };
+/**
+ * Calculates how well a student's CGPA fits a job's required CGPA range.
+ *
+ * A student exactly at minCgpa scores 0% ("just barely qualifies"); a
+ * student at or above maxCgpa scores 100% ("as strong as the company is
+ * looking for"); everything in between is linear. A student below minCgpa
+ * also scores 0% — this is a *compatibility* signal, not an eligibility
+ * gate (eligibility/:jobId/:studentId already handles hard pass/fail).
+ *
+ * If the job has no CGPA range configured (older jobs posted before this
+ * was required), GPA is treated as neutral and doesn't penalize the score.
+ */
+const calculateGpaFit = (studentCgpa, minCgpa, maxCgpa) => {
+    const hasRange = minCgpa !== null && minCgpa !== undefined &&
+                      maxCgpa !== null && maxCgpa !== undefined &&
+                      maxCgpa > minCgpa;
+
+    if (!hasRange) {
+        return { gpaFitPercentage: 100, message: 'This job does not specify a CGPA range.' };
+    }
+
+    const cgpa = parseFloat(studentCgpa);
+    if (Number.isNaN(cgpa)) {
+        return { gpaFitPercentage: 0, message: 'Add your CGPA to your profile to see GPA fit.' };
+    }
+
+    if (cgpa >= maxCgpa) return { gpaFitPercentage: 100 };
+    if (cgpa <= minCgpa) return { gpaFitPercentage: 0 };
+
+    const gpaFitPercentage = Math.round(((cgpa - minCgpa) / (maxCgpa - minCgpa)) * 100);
+    return { gpaFitPercentage };
+};
+
+module.exports = { calculateSkillMatch, normalizeSkillList, calculateGpaFit };
