@@ -4,8 +4,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// JWT Secret Key (In production, keep this hidden in a config file)
-const JWT_SECRET = "super_secret_placement_portal_key";
+// JWT Secret Key
+const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_placement_portal_key';
 
 // ==========================================
 // 1. REGISTER ROUTE (POST /api/auth/register)
@@ -14,24 +14,21 @@ router.post('/register', async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
 
-        let user = await User.findOne({ where: { email } });
-        if (user) {
+        // Check if user already exists (Mongoose findOne — same shape as Sequelize here)
+        const existing = await User.findOne({ email });
+        if (existing) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        user = await User.create({
-            name,
-            email,
-            password: hashedPassword,
-            role
-        });
+        const user = new User({ name, email, password: hashedPassword, role });
+        await user.save();
 
         res.status(201).json({ message: 'User registered successfully!' });
     } catch (err) {
-        console.error(err.message);
+        console.error('Register error:', err.message);
         res.status(500).send('Server Error');
     }
 });
@@ -44,7 +41,7 @@ router.post('/login', async (req, res) => {
         const { email, password } = req.body;
 
         // Check if user exists
-        const user = await User.findOne({ where: { email } });
+        const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials (Email not found)' });
         }
@@ -55,30 +52,22 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials (Wrong password)' });
         }
 
-        // Generate a secure JWT Session Token
-        const payload = {
+        // CHECKPOINT D: Flat payload — { id, role } — NOT nested under a 'user' key
+        const payload = { id: user._id, role: user.role };
+
+        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
+
+        res.json({
+            token,
             user: {
-                id: user.id,
+                id: user._id,
+                name: user.name,
+                email: user.email,
                 role: user.role
             }
-        };
-
-        jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
-            if (err) throw err;
-            // Send back the user details and token to the frontend
-            res.json({
-                token,
-                user: {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    role: user.role
-                }
-            });
         });
-
     } catch (err) {
-        console.error(err.message);
+        console.error('Login error:', err.message);
         res.status(500).send('Server Error');
     }
 });

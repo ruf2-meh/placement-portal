@@ -1,9 +1,14 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../database');
+const mongoose = require('mongoose');
 
-const Application = sequelize.define('Application', {
-    job_id: { type: DataTypes.INTEGER, allowNull: false },
-    student_id: { type: DataTypes.INTEGER, allowNull: false }
-});
+const ApplicationSchema = new mongoose.Schema(
+    {
+        job_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', required: true },
+        student_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+    },
+    { timestamps: true }
+);
 
-module.exports = Application;
+// Prevent duplicate applications
+ApplicationSchema.index({ job_id: 1, student_id: 1 }, { unique: true });
+
+module.exports = mongoose.model('Application', ApplicationSchema);
