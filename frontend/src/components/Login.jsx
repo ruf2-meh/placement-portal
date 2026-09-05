@@ -7,29 +7,9 @@ const Login = () => {
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [selectedRole, setSelectedRole] = useState('Student');
     const [error, setError] = useState('');
-<<<<<<< HEAD
-    
-    // Dynamic stats object initialized with loading placeholders
-    const [stats, setStats] = useState({
-        studentsPlaced: 'Loading...',
-        partnerCompanies: 'Loading...',
-        placementRate: 'Loading...'
-    });
-
-    // Fetch the live database counters when the view loads
-    useEffect(() => {
-        axios.get('http://localhost:5000/api/portal/stats')
-            .then(res => {
-                setStats(res.data);
-            })
-            .catch(err => {
-                console.error("Could not reach stats API:", err);
-                setStats({ studentsPlaced: '0+', partnerCompanies: '0+', placementRate: '0%' });
-            });
-=======
     const [loading, setLoading] = useState(false);
 
-    // Dynamic stats state replacing static hardcoded values
+    // Dynamic stats state initialized with zeros
     const [stats, setStats] = useState({
         studentsPlaced: '0',
         partnerCompanies: '0',
@@ -40,7 +20,7 @@ const Login = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/api/stats/landing');
+                const res = await axios.get('http://localhost:5000/api/portal/stats');
                 if (res.data) {
                     setStats({
                         studentsPlaced: res.data.studentsPlaced || '0',
@@ -54,7 +34,6 @@ const Login = () => {
         };
 
         fetchStats();
->>>>>>> main
     }, []);
 
     const handleChange = (e) => {
@@ -93,10 +72,6 @@ const Login = () => {
         <div style={styles.container}>
             {/* Left Decorative Panel */}
             <div style={styles.leftPanel}>
-<<<<<<< HEAD
-                {/* BRAND UPDATE */}
-=======
->>>>>>> main
                 <div style={styles.logoTopLeft}>🕒 HireHive</div>
                 <div style={styles.heroContent}>
                     <div style={styles.illustrationPlaceholder}>
@@ -106,11 +81,6 @@ const Login = () => {
                     <p style={styles.heroSubtitle}>Connect students, companies, and faculty through one intelligent internship management platform.</p>
                 </div>
                 
-<<<<<<< HEAD
-                {/* DYNAMIC DATABASE STATISTICS BLOCK */}
-=======
-                {/* Dynamic Stats Row at Bottom Left */}
->>>>>>> main
                 <div style={styles.statsRow}>
                     <div><strong>{stats.studentsPlaced}</strong><br/><span style={styles.statLabel}>Students Placed</span></div>
                     <div><strong>{stats.partnerCompanies}</strong><br/><span style={styles.statLabel}>Partner Companies</span></div>
@@ -121,11 +91,6 @@ const Login = () => {
             {/* Right Interactive Form Panel */}
             <div style={styles.rightPanel}>
                 <div style={styles.formCard}>
-<<<<<<< HEAD
-                    {/* BRAND UPDATE */}
-                    <div style={styles.brandTitle}>🕒 HireHive</div>
-=======
->>>>>>> main
                     <h2 style={styles.welcomeText}>Welcome Back</h2>
                     <p style={styles.subWelcome}>Sign in to continue to your dashboard.</p>
 
@@ -211,11 +176,7 @@ const Login = () => {
                     <p style={styles.footerRedirect}>
                         Don't have an account? <Link to="/register" style={styles.redirectLink}>Register</Link>
                     </p>
-<<<<<<< HEAD
-                    
-                    {/* BRAND UPDATE */}
-=======
->>>>>>> main
+
                     <div style={styles.copyrightText}>© 2026 HireHive. All rights reserved.</div>
                 </div>
             </div>
@@ -223,10 +184,6 @@ const Login = () => {
     );
 };
 
-<<<<<<< HEAD
-// Style configurations are maintained exactly as they were
-=======
->>>>>>> main
 const styles = {
     container: { display: 'flex', minHeight: '100vh', backgroundColor: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
     leftPanel: { flex: 1.1, background: 'linear-gradient(135deg, #1e40af 0%, #0369a1 50%, #0d9488 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '40px', color: '#fff', position: 'relative' },
@@ -241,10 +198,7 @@ const styles = {
     
     rightPanel: { flex: 0.9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', backgroundColor: '#f8fafc' },
     formCard: { width: '100%', maxWidth: '420px' },
-<<<<<<< HEAD
-    brandTitle: { fontSize: '20px', fontWeight: 'bold', color: '#1e3a8a', marginBottom: '24px', display: 'none' },
-=======
->>>>>>> main
+
     welcomeText: { fontSize: '28px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' },
     subWelcome: { fontSize: '14px', color: '#64748b', marginBottom: '24px' },
     errorAlert: { padding: '12px', backgroundColor: '#fee2e2', color: '#ef4444', borderRadius: '6px', fontSize: '14px', marginBottom: '15px', border: '1px solid #fca5a5' },

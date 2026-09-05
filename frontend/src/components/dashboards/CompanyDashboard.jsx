@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-
-const API_BASE_URL = 'http://localhost:5000/api';
+import API from '../../api/axios';
+import InterviewScheduler from '../InterviewScheduler';
 
 const CompanyDashboard = () => {
     const navigate = useNavigate();
@@ -17,48 +16,45 @@ const CompanyDashboard = () => {
         description: '',
         requirements: '',
         location: '',
+        jobType: '',
+        paymentType: '',
         deadline: ''
     });
 
     // Helper to extract JWT token
-    const getAuthHeader = () => {
-        const token = localStorage.getItem('token');
-        return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-    };
-
-    // Load initial user state and fetch listed jobs from Express API
+    // Load initial user state and fetch this company's own job postings
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
+        let parsedUser = null;
         if (storedUser) {
             try {
-                setUser(JSON.parse(storedUser));
+                parsedUser = JSON.parse(storedUser);
+                setUser(parsedUser);
             } catch (e) {
                 console.error('Failed to parse user data', e);
             }
         }
-        fetchCompanyJobs();
+
+        if (parsedUser?.id) {
+            fetchCompanyJobs(parsedUser.id);
+        } else {
+            setLoadingJobs(false);
+        }
     }, []);
 
-    const fetchCompanyJobs = async () => {
+    const fetchCompanyJobs = async (companyId) => {
         setLoadingJobs(true);
         try {
-            const response = await axios.get(`${API_BASE_URL}/jobs`, getAuthHeader());
-            // Filter or display API jobs fallback
-            if (Array.isArray(response.data)) {
-                setJobPosts(response.data);
-            }
+            // Only this company's own postings, not every job in the system.
+            const response = await API.get(`/portal/jobs/company/${companyId}`);
+            setJobPosts(Array.isArray(response.data) ? response.data : []);
         } catch (err) {
-            console.warn('Could not fetch server jobs, displaying local fallback list.');
-            setJobPosts([
-                {
-                    _id: '1',
-                    title: 'Backend Web Developer Intern',
-                    description: 'We are looking for a motivated backend intern to help build scalable web systems.',
-                    location: 'Remote',
-                    requirements: 'PHP, MySQL, basic knowledge of relational databases (SQL), and Git.',
-                    deadline: '2026-07-24'
-                }
-            ]);
+            console.error('Could not fetch company jobs:', err);
+            setFeedbackMsg({
+                type: 'error',
+                text: err.response?.data?.message || 'Could not load your job postings. Please refresh the page.'
+            });
+            setJobPosts([]);
         } finally {
             setLoadingJobs(false);
         }
@@ -87,22 +83,24 @@ const CompanyDashboard = () => {
             description: formData.description.trim(),
             requirements: formData.requirements.trim() || 'N/A',
             location: formData.location.trim() || 'Remote',
+            jobType: formData.jobType || null,
+            paymentType: formData.paymentType || null,
             deadline: formData.deadline
         };
 
-        try {
-            const res = await axios.post(`${API_BASE_URL}/jobs`, payload, getAuthHeader());
-            const createdJob = res.data?.job || res.data || { ...payload, _id: Date.now().toString() };
-            
+                try {
+            const res = await API.post('/jobs', payload);
+            const createdJob = res.data?.job || res.data;
+
             setJobPosts((prev) => [createdJob, ...prev]);
-            setFormData({ title: '', description: '', requirements: '', location: '', deadline: '' });
+            setFormData({ title: '', description: '', requirements: '', location: '', jobType: '', paymentType: '', deadline: '' });
             setFeedbackMsg({ type: 'success', text: '🎉 Opportunity published successfully!' });
         } catch (err) {
-            // Local state fallback if backend route is unavailable
-            const fallbackJob = { ...payload, _id: Date.now().toString() };
-            setJobPosts((prev) => [fallbackJob, ...prev]);
-            setFormData({ title: '', description: '', requirements: '', location: '', deadline: '' });
-            setFeedbackMsg({ type: 'success', text: 'Job posted to workspace (Local Mode).' });
+            console.error('Error publishing job:', err);
+            setFeedbackMsg({
+                type: 'error',
+                text: err.response?.data?.message || 'Failed to publish job. Please try again.'
+            });
         } finally {
             setSubmitting(false);
         }
@@ -178,7 +176,7 @@ const CompanyDashboard = () => {
                                 </div>
                             )}
 
-                            <form onSubmit={handlePublishJob} style={styles.form}>
+                                        <form onSubmit={handlePublishJob} style={styles.form}>
                                 <div style={styles.fieldGroup}>
                                     <label style={styles.label}>Job Title <span style={styles.required}>*</span></label>
                                     <input 
@@ -226,6 +224,36 @@ const CompanyDashboard = () => {
                                             placeholder="e.g. Remote / On-site" 
                                             style={styles.input} 
                                         />
+                                    </div>
+                                </div>
+
+                                <div style={styles.twoCol}>
+                                    <div style={styles.fieldGroup}>
+                                        <label style={styles.label}>Job Type</label>
+                                        <select
+                                            name="jobType"
+                                            value={formData.jobType}
+                                            onChange={handleInputChange}
+                                            style={styles.input}
+                                        >
+                                            <option value="">-- Not specified --</option>
+                                            <option value="Remote">Remote</option>
+                                            <option value="On-site">On-site</option>
+                                            <option value="Hybrid">Hybrid</option>
+                                        </select>
+                                    </div>
+                                    <div style={styles.fieldGroup}>
+                                        <label style={styles.label}>Payment Type</label>
+                                        <select
+                                            name="paymentType"
+                                            value={formData.paymentType}
+                                            onChange={handleInputChange}
+                                            style={styles.input}
+                                        >
+                                            <option value="">-- Not specified --</option>
+                                            <option value="Paid">Paid</option>
+                                            <option value="Unpaid">Unpaid</option>
+                                        </select>
                                     </div>
                                 </div>
 
@@ -283,6 +311,8 @@ const CompanyDashboard = () => {
                                 )}
                             </div>
                         </div>
+
+                        <InterviewScheduler />
                     </div>
 
                     {/* Right Side Widgets Column */}

@@ -3,9 +3,9 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { JWT_SECRET } = require('../config/jwtConfig');
+const authMiddleware = require('../middleware/authMiddleware');
 
-// JWT Secret Key (In production, keep this hidden in a config file)
-const JWT_SECRET = "super_secret_placement_portal_key";
 
 // ==========================================
 // 1. REGISTER ROUTE (POST /api/auth/register)
@@ -71,11 +71,15 @@ router.post('/login', async (req, res) => {
         }
 
         // Generate a secure JWT Session Token using user._id
+        //
+        // NOTE: This payload is intentionally flat ({ id, role }), not nested
+        // under a "user" key. authMiddleware.js sets req.user = decoded
+        // directly, so a nested shape would make req.user.id always
+        // undefined for every downstream route (this previously broke the
+        // skill matcher's ability to identify the logged-in student).
         const payload = {
-            user: {
-                id: user._id,
-                role: user.role
-            }
+            id: user._id,
+            role: user.role
         };
 
         jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
@@ -97,5 +101,31 @@ router.post('/login', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+// ==========================================
+// 3. GET CURRENT USER (GET /api/auth/me)
+// ==========================================
+// Frontend dashboards (StudentDashboard.jsx, DashboardHeader.jsx, etc.) fetch
+// this on load to display the logged-in user's real name/role instead of
+// falling back to generic placeholder text ("Student" / "User Name").
+router.get('/me', authMiddleware, async (req, res) => {
+    try {
+        // authMiddleware sets req.user = { id, role, iat, exp } (see
+        // config/jwtConfig.js comments for why this is a flat shape).
+        const user = await User.findById(req.user.id).select('-password');
 
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        res.json({
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+        });
+    } catch (err) {
+        console.error('Error fetching current user:', err.message);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
 module.exports = router;

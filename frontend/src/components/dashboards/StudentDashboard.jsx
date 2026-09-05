@@ -2,6 +2,22 @@ import React, { useState, useEffect, useMemo } from 'react';
 import API from '../../api/axios';
 import YourCompatibilityWidget from '../YourCompatibilityWidget';
 import DashboardHeader from '../DashboardHeader';
+import ProfileCompletion from '../ProfileCompletion';
+import SkillGapAnalyzer from '../SkillGapAnalyzer';
+
+// Reads the logged-in student's own id from what Login.jsx stored at login
+// time. Several fetches below need this (applications, notifications,
+// projects) — previously none of them had any way to know who "you" were,
+// so they were all called without an id and silently failed.
+const getStoredUserId = () => {
+    try {
+        const storedUser = localStorage.getItem('user');
+        return storedUser ? JSON.parse(storedUser)?.id : null;
+    } catch (e) {
+        console.error('Failed to parse stored user', e);
+        return null;
+    }
+};
 
 const StudentDashboard = () => {
     // --- State Variables ---
@@ -11,7 +27,8 @@ const StudentDashboard = () => {
     const [notifications, setNotifications] = useState([]);
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
-    
+    const [interviews, setInterviews] = useState([]);
+
     // UI Action States
     const [applyingId, setApplyingId] = useState(null);
     const [submittingProject, setSubmittingProject] = useState(false);
@@ -19,6 +36,10 @@ const StudentDashboard = () => {
     // Search and Filter state
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
+
+    // Profile form visibility
+    const [showProfileForm, setShowProfileForm] = useState(false);
+
 
     // Portfolio Form State
     const [newProject, setNewProject] = useState({
@@ -33,13 +54,17 @@ const StudentDashboard = () => {
         const fetchDashboardData = async () => {
             try {
                 setLoading(true);
-                
-                const [userRes, jobsRes, appsRes, notifsRes, projectsRes] = await Promise.allSettled([
+
+                const studentId = getStoredUserId();
+                const noId = Promise.reject(new Error('No student ID available'));
+
+                const [userRes, jobsRes, appsRes, notifsRes, projectsRes, interviewsRes] = await Promise.allSettled([
                     API.get('/auth/me'),
                     API.get('/jobs'),
-                    API.get('/portal/applications'),
-                    API.get('/portal/notifications'),
-                    API.get('/portal/projects')
+                    studentId ? API.get(`/portal/applications/${studentId}`) : noId,
+                    studentId ? API.get(`/portal/notifications/${studentId}`) : noId,
+                    studentId ? API.get(`/portal/projects/${studentId}`) : noId,
+                    API.get('/interviews/student')
                 ]);
 
                 if (userRes.status === 'fulfilled') setUser(userRes.value.data);
@@ -50,6 +75,8 @@ const StudentDashboard = () => {
                 if (appsRes.status === 'fulfilled') setApplications(appsRes.value.data || []);
                 if (notifsRes.status === 'fulfilled') setNotifications(notifsRes.value.data || []);
                 if (projectsRes.status === 'fulfilled') setProjects(projectsRes.value.data || []);
+                if (interviewsRes.status === 'fulfilled') setInterviews(interviewsRes.value.data || []);
+
 
             } catch (err) {
                 console.error("Error loading dashboard data:", err);
@@ -71,10 +98,17 @@ const StudentDashboard = () => {
 
             if (activeFilter === 'All') return matchesSearch;
 
-            const loc = (j.location || '').toLowerCase();
-            const type = (j.type || j.jobType || '').toLowerCase();
-            const target = activeFilter.toLowerCase();
-            const matchesFilter = loc.includes(target) || type.includes(target);
+            const paymentFilters = ['Paid', 'Unpaid'];
+            let matchesFilter;
+
+            if (paymentFilters.includes(activeFilter)) {
+                matchesFilter = (j.paymentType || '').toLowerCase() === activeFilter.toLowerCase();
+            } else {
+                const jobType = (j.jobType || '').toLowerCase();
+                const loc = (j.location || '').toLowerCase();
+                const target = activeFilter.toLowerCase();
+                matchesFilter = jobType === target || loc.includes(target);
+            }
 
             return matchesSearch && matchesFilter;
         });
@@ -91,9 +125,12 @@ const StudentDashboard = () => {
             setApplyingId(jobId);
             await API.post(`/jobs/${jobId}/apply`);
             alert("Application submitted successfully!");
-            
-            const appsRes = await API.get('/portal/applications');
-            setApplications(appsRes.data || []);
+
+            const studentId = getStoredUserId();
+            if (studentId) {
+                const appsRes = await API.get(`/portal/applications/${studentId}`);
+                setApplications(appsRes.data || []);
+            }
         } catch (err) {
             alert(err.response?.data?.message || "Failed to apply for job.");
         } finally {
@@ -104,11 +141,16 @@ const StudentDashboard = () => {
     const handleAddProject = async (e) => {
         e.preventDefault();
         if (!newProject.title.trim()) return alert("Please enter a project title.");
-        
+
+        const studentId = getStoredUserId();
+        if (!studentId) {
+            return alert("Could not identify your account. Please log in again.");
+        }
+
         try {
             setSubmittingProject(true);
-            const res = await API.post('/portal/projects', newProject);
-            setProjects(prev => [...prev, res.data]);
+            const res = await API.post('/portal/projects', { ...newProject, student: studentId });
+            setProjects(prev => [...prev, res.data.project || res.data]);
             setNewProject({ title: '', techStack: '', description: '', link: '' });
         } catch (err) {
             alert("Failed to add project.");
@@ -116,7 +158,6 @@ const StudentDashboard = () => {
             setSubmittingProject(false);
         }
     };
-
     const handleDeleteProject = async (id) => {
         if (!window.confirm("Are you sure you want to delete this project?")) return;
         
@@ -163,8 +204,30 @@ const StudentDashboard = () => {
 
                 {/* MAIN TWO-COLUMN GRID */}
                 <div style={styles.gridContainer}>
+
                     {/* LEFT COLUMN: SEARCH & JOBS */}
                     <div style={styles.leftCol}>
+                        <div style={styles.sectionCard}>
+                            <div style={styles.sectionHeader}>
+                                <div>
+                                    <h2 style={styles.sectionTitle}>👤 Your Profile</h2>
+                                    <p style={styles.sectionSub}>Keep your skills, CGPA, and backlogs up to date — this is what compatibility scores and eligibility checks are based on.</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowProfileForm((prev) => !prev)}
+                                    style={{ ...styles.countBadge, border: 'none', cursor: 'pointer' }}
+                                >
+                                    {showProfileForm ? 'Hide' : 'Edit Profile'}
+                                </button>
+                            </div>
+                            {showProfileForm && (
+                                <ProfileCompletion
+                                    userId={getStoredUserId()}
+                                    onProfileSaved={() => setShowProfileForm(false)}
+                                />
+                            )}
+                        </div>
+
                         <div style={styles.sectionCard}>
                             <div style={styles.sectionHeader}>
                                 <div>
@@ -226,6 +289,7 @@ const StudentDashboard = () => {
                                             </div>
 
                                             <YourCompatibilityWidget jobId={jobId} />
+                                            <SkillGapAnalyzer jobId={jobId} />
 
                                             <button 
                                                 onClick={() => handleApply(jobId)} 
@@ -345,6 +409,66 @@ const StudentDashboard = () => {
                                         </div>
                                     );
                                 })
+                            )}
+                        </div>
+
+                        {/* MY INTERVIEWS (Feature 14) — read-only for students;
+                            status changes are company-controlled */}
+                        <div style={styles.sectionCard}>
+                            <div style={styles.sectionHeader}>
+                                <div>
+                                    <h2 style={styles.sectionTitle}>🗓️ My Interviews</h2>
+                                    <p style={styles.sectionSub}>Interviews scheduled by companies for your applications</p>
+                                </div>
+                                <span style={styles.countBadge}>{interviews.length}</span>
+                            </div>
+
+                            {interviews.length === 0 ? (
+                                <p style={{ color: '#64748b', fontSize: '14px' }}>No interviews scheduled yet.</p>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {interviews.map((interview) => (
+                                        <div key={interview._id} style={styles.jobCard}>
+                                            <h3 style={styles.jobTitle}>{interview.job?.title || 'Job'}</h3>
+                                            <p style={styles.jobDesc}>{interview.company?.name || 'Company'}</p>
+                                            <div style={styles.jobMeta}>
+                                                <span>📅 {new Date(interview.scheduledAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                                                <span>•</span>
+                                                <span>⏱️ {interview.duration || 30} min</span>
+                                                <span>•</span>
+                                                <span>🎥 {interview.interviewType}</span>
+                                            </div>
+                                            {interview.meetingLink && (
+                                                <p style={{ fontSize: '13px' }}>🔗 <a href={interview.meetingLink} target="_blank" rel="noopener noreferrer">{interview.meetingLink}</a></p>
+                                            )}
+                                            {interview.location && (
+                                                <p style={{ fontSize: '13px' }}>📍 {interview.location}</p>
+                                            )}
+                                            {interview.notes && (
+                                                <p style={{ fontSize: '13px', color: '#64748b' }}>📝 {interview.notes}</p>
+                                            )}
+                                            <span style={{
+                                                display: 'inline-block',
+                                                marginTop: '6px',
+                                                padding: '3px 10px',
+                                                borderRadius: '12px',
+                                                fontSize: '11px',
+                                                fontWeight: '700',
+                                                textTransform: 'capitalize',
+                                                backgroundColor:
+                                                    interview.status === 'completed' ? '#dcfce7' :
+                                                    interview.status === 'cancelled' ? '#fee2e2' :
+                                                    interview.status === 'rescheduled' ? '#fef3c7' : '#dbeafe',
+                                                color:
+                                                    interview.status === 'completed' ? '#15803d' :
+                                                    interview.status === 'cancelled' ? '#b91c1c' :
+                                                    interview.status === 'rescheduled' ? '#b45309' : '#1d4ed8'
+                                            }}>
+                                                {interview.status}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
                     </div>

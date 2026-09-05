@@ -1,41 +1,46 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../database');
+const mongoose = require('mongoose');
 
-const StudentProfile = sequelize.define('StudentProfile', {
-    user_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        unique: true
-    },
-    full_name: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    phone: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    department: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    cgpa: {
-        type: DataTypes.FLOAT,
-        allowNull: false
-    },
-    backlogs: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0
-    },
-    skills: {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    bio: {
-        type: DataTypes.TEXT,
-        allowNull: true
-    }
-});
+const studentProfileSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    unique: true
+  },
+  cgpa: {
+    type: Number,
+    default: 0.0
+  },
+  backlogs: {
+    type: Number,
+    default: 0
+  },
+  department: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  full_name: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  bio: {
+    type: String,
+    default: ''
+  },
+  phone: {
+    type: String,
+    default: ''
+  },
+  resumeUrl: {
+    type: String,
+    default: ''
+  },
+  skills: {
+    type: [String],
+    default: []
+  }
+}, { timestamps: true });
 
-module.exports = StudentProfile;
+module.exports = mongoose.model('StudentProfile', studentProfileSchema);

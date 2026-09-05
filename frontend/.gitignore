@@ -45,9 +45,6 @@ out/
 *.njsproj
 *.sln
 *.sw?
-<<<<<<< HEAD
-backend/database.sqlite
-=======
 .DS_Store
 .DS_Store?
 Thumbs.db
@@ -65,11 +62,5 @@ cypress/screenshots/
 .vite/
 .parcel-cache/
 
-node_modules/
+# Backend artifacts that shouldn't be committed
 backend/node_modules/
-frontend/node_modules/
-.env
-
-node_modules/
-**/node_modules/
->>>>>>> main

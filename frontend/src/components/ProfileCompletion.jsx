@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import API from '../api/axios';
 
-const ProfileCompletion = ({ userId = 1, onProfileSaved }) => {
+const ProfileCompletion = ({ userId, onProfileSaved }) => {
     const [formData, setFormData] = useState({
         full_name: '',
         phone: '',
@@ -17,9 +17,11 @@ const ProfileCompletion = ({ userId = 1, onProfileSaved }) => {
 
     // Fetch existing profile if available
     useEffect(() => {
+        if (!userId) return;
+
         const fetchProfile = async () => {
             try {
-                const res = await axios.get(`http://localhost:5000/api/profile/${userId}`);
+                const res = await API.get(`/profile/${userId}`);
                 if (res.data) {
                     setFormData({
                         full_name: res.data.full_name || '',
@@ -44,11 +46,15 @@ const ProfileCompletion = ({ userId = 1, onProfileSaved }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!userId) {
+            setStatusMsg({ type: 'error', text: 'Could not identify your account. Please log in again.' });
+            return;
+        }
         setLoading(true);
         setStatusMsg({ type: '', text: '' });
 
         try {
-            const res = await axios.post('http://localhost:5000/api/profile', {
+            const res = await API.post('/profile', {
                 ...formData,
                 user_id: userId
             });
