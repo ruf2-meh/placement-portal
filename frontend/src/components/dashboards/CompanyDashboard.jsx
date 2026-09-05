@@ -20,6 +20,8 @@ const CompanyDashboard = () => {
         location: '',
         jobType: '',
         paymentType: '',
+        min_cgpa: '',
+        max_cgpa: '',
         deadline: ''
     });
 
@@ -77,6 +79,16 @@ const CompanyDashboard = () => {
         e.preventDefault();
         if (!formData.title || !formData.description || !formData.deadline) return;
 
+        if (formData.min_cgpa === '' || formData.max_cgpa === '') {
+            setFeedbackMsg({ type: 'error', text: 'Minimum and maximum CGPA are required.' });
+            return;
+        }
+
+        if (parseFloat(formData.min_cgpa) >= parseFloat(formData.max_cgpa)) {
+            setFeedbackMsg({ type: 'error', text: 'Maximum CGPA must be greater than minimum CGPA.' });
+            return;
+        }
+
         setSubmitting(true);
         setFeedbackMsg({ type: '', text: '' });
 
@@ -87,19 +99,23 @@ const CompanyDashboard = () => {
             location: formData.location.trim() || 'Remote',
             jobType: formData.jobType || null,
             paymentType: formData.paymentType || null,
+            min_cgpa: formData.min_cgpa,
+            max_cgpa: formData.max_cgpa,
             deadline: formData.deadline
         };
 
-                try {
+        try {
             const res = await API.post('/jobs', payload);
             const createdJob = res.data?.job || res.data;
 
             setJobPosts((prev) => [createdJob, ...prev]);
-            setFormData({ title: '', description: '', requirements: '', location: '', jobType: '', paymentType: '', deadline: '' });
+            setFormData({ title: '', description: '', requirements: '', location: '', jobType: '', paymentType: '', min_cgpa: '', max_cgpa: '', deadline: '' });
             setFeedbackMsg({ type: 'success', text: '🎉 Opportunity published successfully!' });
         } catch (err) {
             console.error('Error publishing job:', err);
             setFeedbackMsg({
+
+
                 type: 'error',
                 text: err.response?.data?.message || 'Failed to publish job. Please try again.'
             });
@@ -259,13 +275,47 @@ const CompanyDashboard = () => {
                                     </div>
                                 </div>
 
+                                <div style={styles.twoCol}>
+                                    <div style={styles.fieldGroup}>
+                                        <label style={styles.label}>Minimum CGPA <span style={styles.required}>*</span></label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            name="min_cgpa"
+                                            value={formData.min_cgpa}
+                                            onChange={handleInputChange}
+                                            placeholder="e.g. 3.2"
+                                            style={styles.input}
+                                            required
+                                        />
+                                    </div>
+                                    <div style={styles.fieldGroup}>
+                                        <label style={styles.label}>Maximum CGPA <span style={styles.required}>*</span></label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            name="max_cgpa"
+                                            value={formData.max_cgpa}
+                                            onChange={handleInputChange}
+                                            placeholder="e.g. 4.00"
+                                            style={styles.input}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <p style={{ fontSize: '12px', color: '#64748b', margin: '-8px 0 8px 0' }}>
+                                    Students closer to the maximum CGPA will show as more compatible for this role.
+                                </p>
+
                                 <div style={styles.fieldGroup}>
                                     <label style={styles.label}>Application Deadline Date <span style={styles.required}>*</span></label>
                                     <input 
                                         type="date" 
                                         name="deadline"
                                         value={formData.deadline} 
-                                        onChange={handleInputChange} 
+                                        onChange={handleInputChange}
                                         style={styles.input} 
                                         required
                                     />
@@ -340,29 +390,7 @@ const CompanyDashboard = () => {
                             </div>
                         </div>
 
-                        <div style={styles.sideWidgetRow}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span>⚡</span>
-                                <span style={styles.widgetTitleText}>Skill Match Score</span>
-                            </div>
-                            <span style={styles.comingSoonTag}>COMING SOON</span>
-                        </div>
 
-                        <div style={styles.sideWidgetRow}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span>✅</span>
-                                <span style={styles.widgetTitleText}>Eligibility Status</span>
-                            </div>
-                            <span style={styles.comingSoonTag}>COMING SOON</span>
-                        </div>
-
-                        <div style={styles.sideWidgetRow}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span>📄</span>
-                                <span style={styles.widgetTitleText}>Resume Builder</span>
-                            </div>
-                            <span style={styles.comingSoonTag}>COMING SOON</span>
-                        </div>
                     </div>
                 </div>
             </main>

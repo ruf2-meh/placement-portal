@@ -448,17 +448,12 @@ const StudentDashboard = () => {
                         </div>
 
                         {/* COMING SOON WIDGETS */}
-                        <div style={{ ...styles.sectionCard, marginTop: '16px' }}>
-                            <div style={styles.comingSoonRow}>
-                                <span style={{ fontSize: '14px', fontWeight: '600', color: '#334155' }}>⚡ Skill Match Score</span>
-                                <span style={styles.comingBadge}>COMING SOON</span>
-                            </div>
-                        </div>
 
-                        <div style={{ ...styles.sectionCard, marginTop: '12px' }}>
+
+                        <div style={{ ...styles.sectionCard, marginTop: '1px' }}>
                             <div style={styles.comingSoonRow}>
-                                <span style={{ fontSize: '14px', fontWeight: '600', color: '#334155' }}>☑ Eligibility Status</span>
-                                <span style={styles.comingBadge}>COMING SOON</span>
+                                <span style={{ fontSize: '1px', fontWeight: '6', color: '#334155' }}></span>
+                                <span style={styles.comingBadge}></span>
                             </div>
                         </div>
                     </div>

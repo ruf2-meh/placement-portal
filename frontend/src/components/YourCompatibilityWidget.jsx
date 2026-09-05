@@ -36,7 +36,7 @@ const YourCompatibilityWidget = ({ jobId }) => {
         return null; // Graceful fallback; doesn't break the rest of the job detail view
     }
 
-    const { matchPercentage, matchedSkills, missingSkills, requiredSkillCount } = matchData;
+    const { matchPercentage, matchedSkills, missingSkills, requiredSkillCount, skillMatchPercentage, gpaFitPercentage, gpaMessage } = matchData;
 
     // Dynamic color indicator based on score
     const getBadgeColor = (score) => {
@@ -58,6 +58,17 @@ const YourCompatibilityWidget = ({ jobId }) => {
                     {matchPercentage}% Match
                 </div>
             </div>
+
+            {(skillMatchPercentage !== undefined || gpaFitPercentage !== undefined) && (
+                <div style={styles.breakdownRow}>
+                    {skillMatchPercentage !== undefined && (
+                        <span style={styles.breakdownPill}>🛠️ Skills: <strong>{skillMatchPercentage}%</strong></span>
+                    )}
+                    {gpaFitPercentage !== undefined && (
+                        <span style={styles.breakdownPill} title={gpaMessage || ''}>🎓 GPA Fit: <strong>{gpaFitPercentage}%</strong></span>
+                    )}
+                </div>
+            )}
 
             <div style={styles.statsSummary}>
                 <span>Required Skills: <strong>{requiredSkillCount}</strong></span>
@@ -90,6 +101,8 @@ const styles = {
     heading: { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0 },
     scoreBadge: { padding: '4px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: '700', border: '1px solid' },
     statsSummary: { fontSize: '12px', color: '#64748b', display: 'flex', gap: '8px', marginBottom: '14px' },
+    breakdownRow: { display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' },
+    breakdownPill: { fontSize: '11px', color: '#475569', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', padding: '3px 10px', borderRadius: '12px' },
     skillsContainer: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
     matchedTag: { backgroundColor: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '600' },
     missingTag: { backgroundColor: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '500' },

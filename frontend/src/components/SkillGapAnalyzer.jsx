@@ -42,7 +42,7 @@ const SkillGapAnalyzer = ({ jobId }) => {
         return null; // Graceful fallback; doesn't break the rest of the job detail view
     }
 
-    const { matchPercentage, matchedSkills, missingSkills, requiredSkillCount, studentSkillCount } = matchData;
+    const { matchPercentage, matchedSkills, missingSkills, requiredSkillCount, studentSkillCount, gpaFitPercentage, gpaMessage } = matchData;
 
     // Empty states, per spec
     if (requiredSkillCount === 0) {
@@ -69,6 +69,10 @@ const SkillGapAnalyzer = ({ jobId }) => {
                 <h3 style={styles.heading}>📊 Skill Gap Analysis</h3>
                 <div style={styles.scoreBadge}>{matchPercentage}% Compatibility</div>
             </div>
+
+            {gpaFitPercentage !== undefined && (
+                <p style={styles.subtext} title={gpaMessage || ''}>🎓 GPA Fit: <strong>{gpaFitPercentage}%</strong></p>
+            )}
 
             {missingSkills.length === 0 ? (
                 <p style={styles.successMessage}>✅ You have all the required skills for this job.</p>

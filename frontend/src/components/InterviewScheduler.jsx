@@ -23,6 +23,11 @@ const InterviewScheduler = () => {
     const [formData, setFormData] = useState(emptyForm);
     const [submitting, setSubmitting] = useState(false);
 
+    // Which application's profile panel is currently expanded, and its data
+    const [expandedProfileFor, setExpandedProfileFor] = useState(null);
+    const [profileData, setProfileData] = useState({}); // studentId -> { profile, projects }
+    const [profileLoading, setProfileLoading] = useState(null);
+
     const loadData = async () => {
         setLoading(true);
         try {
@@ -52,6 +57,30 @@ const InterviewScheduler = () => {
         }
         return acc;
     }, {});
+
+    const toggleProfile = async (application) => {
+        const studentId = application.student?._id;
+        if (!studentId) return;
+
+        if (expandedProfileFor === application._id) {
+            setExpandedProfileFor(null);
+            return;
+        }
+
+        setExpandedProfileFor(application._id);
+
+        if (!profileData[studentId]) {
+            setProfileLoading(studentId);
+            try {
+                const res = await API.get(`/portal/applicant-profile/${studentId}`);
+                setProfileData((prev) => ({ ...prev, [studentId]: res.data }));
+            } catch (err) {
+                setProfileData((prev) => ({ ...prev, [studentId]: { error: err.response?.data?.message || 'Could not load profile.' } }));
+            } finally {
+                setProfileLoading(null);
+            }
+        }
+    };
 
     const openScheduleForm = (applicationId) => {
         setSchedulingFor(applicationId);
@@ -180,6 +209,9 @@ const InterviewScheduler = () => {
                                         <strong>{app.student?.name || 'Unknown Student'}</strong>
                                         <div style={styles.subtext}>{app.student?.email}</div>
                                         <div style={styles.subtext}>Applied for: {app.job?.title || 'N/A'}</div>
+                                        <button onClick={() => toggleProfile(app)} style={styles.linkBtn}>
+                                            {expandedProfileFor === app._id ? 'Hide Profile' : 'View Profile & Projects'}
+                                        </button>
                                     </div>
 
                                     {interview ? (
@@ -205,6 +237,58 @@ const InterviewScheduler = () => {
                                         </button>
                                     )}
                                 </div>
+
+                                {expandedProfileFor === app._id && (
+                                    <div style={styles.profilePanel}>
+                                        {profileLoading === app.student?._id ? (
+                                            <p style={styles.subtext}>Loading profile...</p>
+                                        ) : (() => {
+                                            const data = profileData[app.student?._id];
+                                            if (!data) return null;
+                                            if (data.error) return <p style={styles.subtext}>{data.error}</p>;
+
+                                            const { profile, projects } = data;
+                                            return (
+                                                <>
+                                                    <div style={styles.profileGrid}>
+                                                        <span><strong>Department:</strong> {profile?.department || 'N/A'}</span>
+                                                        <span><strong>CGPA:</strong> {profile?.cgpa ?? 'N/A'}</span>
+                                                        <span><strong>Backlogs:</strong> {profile?.backlogs ?? 'N/A'}</span>
+                                                        <span><strong>Phone:</strong> {profile?.phone || 'N/A'}</span>
+                                                    </div>
+                                                    {profile?.skills?.length > 0 && (
+                                                        <div style={{ marginTop: '8px' }}>
+                                                            <strong style={styles.subtext}>Skills:</strong>{' '}
+                                                            {profile.skills.map((s, i) => (
+                                                                <span key={i} style={styles.skillTag}>{s}</span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {profile?.bio && (
+                                                        <p style={{ ...styles.subtext, marginTop: '8px' }}>{profile.bio}</p>
+                                                    )}
+                                                    <div style={{ marginTop: '12px' }}>
+                                                        <strong style={styles.subtext}>Projects ({projects.length})</strong>
+                                                        {projects.length === 0 ? (
+                                                            <p style={styles.subtext}>No projects added.</p>
+                                                        ) : (
+                                                            projects.map((proj) => (
+                                                                <div key={proj._id} style={styles.projectCard}>
+                                                                    <strong>{proj.title}</strong>
+                                                                    {proj.techStack && <div style={styles.subtext}>{proj.techStack}</div>}
+                                                                    {proj.description && <p style={styles.subtext}>{proj.description}</p>}
+                                                                    {proj.projectUrl && (
+                                                                        <a href={proj.projectUrl} target="_blank" rel="noopener noreferrer" style={styles.subtext}>🔗 {proj.projectUrl}</a>
+                                                                    )}
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+                                )}
 
                                 {(isFormOpenForThis || (rescheduling && rescheduling.application === app._id)) && (
                                     <form onSubmit={handleSubmit} style={styles.form}>
@@ -288,6 +372,11 @@ const styles = {
     scheduleBtn: { backgroundColor: '#2563eb', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
     smallBtn: { backgroundColor: '#f1f5f9', color: '#334155', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
     smallBtnDanger: { backgroundColor: '#fee2e2', color: '#b91c1c', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
+    linkBtn: { background: 'none', border: 'none', color: '#2563eb', fontSize: '12px', fontWeight: '600', cursor: 'pointer', padding: '4px 0', textDecoration: 'underline' },
+    profilePanel: { marginTop: '10px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' },
+    profileGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '13px', color: '#334155' },
+    skillTag: { display: 'inline-block', backgroundColor: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', marginRight: '6px', marginTop: '4px' },
+    projectCard: { marginTop: '8px', padding: '8px', backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px' },
     form: { marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' },
     formRow: { display: 'flex', gap: '12px', marginBottom: '10px', flexWrap: 'wrap' },
     formGroup: { flex: '1 1 150px' },

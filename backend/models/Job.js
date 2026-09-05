@@ -48,6 +48,10 @@ const jobSchema = new mongoose.Schema({
     type: Number,
     default: null
   },
+  max_cgpa: {
+    type: Number,
+    default: null
+  },
   max_backlogs: {
     type: Number,
     default: null
