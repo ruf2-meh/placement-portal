@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import InterviewScheduler from '../InterviewScheduler';
+import InterviewStatusTracker from '../InterviewStatusTracker';
+
 
 const CompanyDashboard = () => {
     const navigate = useNavigate();
@@ -313,6 +315,7 @@ const CompanyDashboard = () => {
                         </div>
 
                         <InterviewScheduler />
+                        <InterviewStatusTracker role="company" />
                     </div>
 
                     {/* Right Side Widgets Column */}
