@@ -1,11 +1,27 @@
-const { Sequelize } = require('sequelize');
+const mongoose = require('mongoose');
 
-// Create a single, shared database connection instance
-const sequelize = new Sequelize({
-    dialect: 'sqlite',
-    storage: './database.sqlite',
-    logging: false
-});
 
-// Export it cleanly so all models can find it
-module.exports = { sequelize };
+const connectDB = async () => {
+
+    try {
+
+        await mongoose.connect(process.env.MONGO_URI);
+
+        console.log("✅ MongoDB Connected Successfully");
+        console.log("Database Name:", mongoose.connection.name);
+
+    } catch (error) {
+
+        console.error(
+            "❌ MongoDB Connection Error:",
+            error.message
+        );
+
+        process.exit(1);
+
+    }
+
+};
+
+
+module.exports = connectDB;

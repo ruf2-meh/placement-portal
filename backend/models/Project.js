@@ -1,11 +1,35 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../database');
+const mongoose = require('mongoose');
 
-const Project = sequelize.define('Project', {
-    student_id: { type: DataTypes.INTEGER, allowNull: false },
-    title: { type: DataTypes.STRING, allowNull: false },
-    description: { type: DataTypes.TEXT },
-    link: { type: DataTypes.STRING }
+
+const projectSchema = new mongoose.Schema(
+{
+
+    student:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:'User',
+        required:true
+    },
+
+
+    title:{
+        type:String,
+        required:true
+    },
+
+
+    description:{
+        type:String
+    },
+
+
+    link:{
+        type:String
+    }
+
+},
+{
+    timestamps:true
 });
 
-module.exports = Project;
+
+module.exports = mongoose.model('Project', projectSchema);

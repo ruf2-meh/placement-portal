@@ -10,20 +10,36 @@ export default function Dashboard() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [projectForm, setProjectForm] = useState({ title: '', description: '', link: '' });
   const [myProjects, setMyProjects] = useState([]);
+  const [certificates, setCertificates] = useState([]);
+  const [applyStatus, setApplyStatus] = useState({});
 
   // --- Company States ---
   const [jobForm, setJobForm] = useState({ title: '', description: '', requirements: '', location: '', deadline: '' });
   const [myJobs, setMyJobs] = useState([]);
 
+  // --- Faculty States ---
+  const [facultyApplications, setFacultyApplications] = useState([]);
+  const [reviewNotes, setReviewNotes] = useState({});
+  const [reviewLoadingId, setReviewLoadingId] = useState(null);
+
   const unreadCount = notifications.filter((notification) => !notification.is_read).length;
+  const pendingFacultyReviews = facultyApplications.filter(
+    (application) => application.review_status === 'Pending'
+  ).length;
+  const completedFacultyReviews = facultyApplications.filter(
+    (application) => application.review_status !== 'Pending'
+  ).length;
 
   useEffect(() => {
     fetchNotifications();
     if (user.role === 'Student') {
       fetchJobs();
       fetchMyProjects();
+      fetchCertificates();
     } else if (user.role === 'Company') {
       fetchCompanyJobs();
+    } else if (user.role === 'Faculty') {
+      fetchFacultyApplications();
     }
   }, []);
 
@@ -43,7 +59,7 @@ export default function Dashboard() {
 
   const markNotificationAsRead = async (notificationId) => {
     const selectedNotification = notifications.find(
-      (notification) => notification.id === notificationId
+      (notification) => notification._id === notificationId
     );
 
     if (!selectedNotification || selectedNotification.is_read) {
@@ -58,7 +74,7 @@ export default function Dashboard() {
 
       setNotifications((currentNotifications) =>
         currentNotifications.map((notification) =>
-          notification.id === notificationId
+          notification._id === notificationId
             ? { ...notification, is_read: true }
             : notification
         )
@@ -112,12 +128,70 @@ export default function Dashboard() {
     } catch (err) { console.error("Error pulling company job list"); }
   };
 
+  const fetchFacultyApplications = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/portal/faculty/applications');
+      setFacultyApplications(res.data);
+
+      const savedNotes = {};
+      res.data.forEach((application) => {
+        savedNotes[application._id] = application.recommendation_note || '';
+      });
+      setReviewNotes(savedNotes);
+    } catch (err) {
+      console.error("Error pulling faculty application review list", err);
+    }
+  };
+
+  const handleFacultyReview = async (applicationId, reviewStatus) => {
+    try {
+      setReviewLoadingId(applicationId);
+
+      const res = await axios.patch(
+        `http://localhost:5000/api/portal/faculty/applications/${applicationId}/review`,
+        {
+          faculty_id: user.id,
+          review_status: reviewStatus,
+          recommendation_note: reviewNotes[applicationId] || ''
+        }
+      );
+
+      alert(res.data.message);
+      await fetchFacultyApplications();
+      await fetchNotifications();
+    } catch (err) {
+      alert(err.response?.data?.message || "Unable to review this application.");
+    } finally {
+      setReviewLoadingId(null);
+    }
+  };
+
   const fetchMyProjects = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/api/portal/projects/${user.id}`);
       setMyProjects(res.data);
     } catch (err) { console.error("Error pulling student showcase"); }
   };
+
+
+  const fetchCertificates = async () => {
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/certificates/student/${user.id}`
+      );
+      setCertificates(res.data);
+    } catch (err) {
+      console.error("Error pulling certificates", err);
+    }
+  };
+
+  const handleDownloadCertificate = (certificateId) => {
+    window.open(
+      `http://localhost:5000/api/certificates/download/${certificateId}`,
+      '_blank'
+    );
+  };
+
 
   const handlePostJob = async (e) => {
     e.preventDefault();
@@ -142,11 +216,31 @@ export default function Dashboard() {
 
   const handleApply = async (jobId) => {
     try {
-      const res = await axios.post('http://localhost:5000/api/portal/jobs/apply', { job_id: jobId, student_id: user.id });
-      alert(res.data.message);
+      setApplyStatus((current) => ({
+        ...current,
+        [jobId]: { type: 'loading', message: 'Checking eligibility...' }
+      }));
+
+      const res = await axios.post('http://localhost:5000/api/portal/jobs/apply', {
+        job_id: jobId,
+        student_id: user.id
+      });
+
+      setApplyStatus((current) => ({
+        ...current,
+        [jobId]: { type: 'success', message: res.data.message }
+      }));
+
       fetchNotifications();
+
     } catch (err) {
-      alert(err.response?.data?.message || "Application process runtime error occurred.");
+      setApplyStatus((current) => ({
+        ...current,
+        [jobId]: {
+          type: 'error',
+          message: err.response?.data?.message || "You do not meet the job requirements."
+        }
+      }));
     }
   };
 
@@ -214,8 +308,8 @@ export default function Dashboard() {
                     notifications.slice(0, 6).map((notification) => (
                       <button
                         type="button"
-                        key={notification.id}
-                        onClick={() => markNotificationAsRead(notification.id)}
+                        key={notification._id}
+                        onClick={() => markNotificationAsRead(notification._id)}
                         style={{
                           ...styles.notificationDropdownItem,
                           ...(notification.is_read
@@ -253,23 +347,45 @@ export default function Dashboard() {
           <div style={styles.workspacePill}>● {user.role} Workspace</div>
           <h1 style={styles.heroTitle}>Welcome back, {user.name} 👋</h1>
           <p style={styles.heroSubtitle}>
-            {user.role === 'Student' 
+            {user.role === 'Student'
               ? "Search internships, manage your portfolio, and stay updated with important notifications."
-              : "Broadcast fresh internship opportunities, review applicant project history, and track team hiring milestones."}
+              : user.role === 'Company'
+                ? "Broadcast fresh internship opportunities, review applicant project history, and track team hiring milestones."
+                : "Review student applications, add recommendation notes, and approve or reject submissions before company review."}
           </p>
-          
+
           <div style={styles.metricsRow}>
             <div style={styles.metricCard}>
-              <span style={styles.metricValue}>{user.role === 'Student' ? jobs.length : myJobs.length}</span>
-              <span style={styles.metricLabel}>{user.role === 'Student' ? 'Applications' : 'Active Posts'}</span>
+              <span style={styles.metricValue}>
+                {user.role === 'Student'
+                  ? jobs.length
+                  : user.role === 'Company'
+                    ? myJobs.length
+                    : facultyApplications.length}
+              </span>
+              <span style={styles.metricLabel}>
+                {user.role === 'Student'
+                  ? 'Applications'
+                  : user.role === 'Company'
+                    ? 'Active Posts'
+                    : 'Applications'}
+              </span>
             </div>
             <div style={styles.metricCard}>
-              <span style={styles.metricValue}>0</span>
-              <span style={styles.metricLabel}>Saved Jobs</span>
+              <span style={styles.metricValue}>
+                {user.role === 'Faculty' ? pendingFacultyReviews : 0}
+              </span>
+              <span style={styles.metricLabel}>
+                {user.role === 'Faculty' ? 'Pending Review' : 'Saved Jobs'}
+              </span>
             </div>
             <div style={styles.metricCard}>
-              <span style={styles.metricValue}>—</span>
-              <span style={styles.metricLabel}>Profile Score</span>
+              <span style={styles.metricValue}>
+                {user.role === 'Faculty' ? completedFacultyReviews : '—'}
+              </span>
+              <span style={styles.metricLabel}>
+                {user.role === 'Faculty' ? 'Reviewed' : 'Profile Score'}
+              </span>
             </div>
           </div>
         </div>
@@ -366,6 +482,165 @@ export default function Dashboard() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </section>
+            </>
+          ) : user.role === 'Faculty' ? (
+            <>
+              {/* Faculty Application Review Workspace */}
+              <section style={styles.contentCard}>
+                <div style={styles.cardHeader}>
+                  <span style={{ ...styles.cardIcon, backgroundColor: '#eef2ff', color: '#4f46e5' }}>📝</span>
+                  <div>
+                    <h3 style={styles.cardTitle}>Student Application Reviews</h3>
+                    <p style={styles.cardSub}>Review applications and add recommendation notes before company submission</p>
+                  </div>
+                  <span style={styles.resultsBadge}>{facultyApplications.length} applications</span>
+                </div>
+
+                <div style={styles.facultySummaryRow}>
+                  <div style={styles.facultySummaryCard}>
+                    <span style={styles.facultySummaryValue}>{pendingFacultyReviews}</span>
+                    <span style={styles.facultySummaryLabel}>Pending</span>
+                  </div>
+                  <div style={styles.facultySummaryCard}>
+                    <span style={styles.facultySummaryValue}>{completedFacultyReviews}</span>
+                    <span style={styles.facultySummaryLabel}>Reviewed</span>
+                  </div>
+                </div>
+
+                <div style={styles.facultyApplicationList}>
+                  {facultyApplications.length === 0 ? (
+                    <div style={styles.emptyIllustrationState}>
+                      <div style={{ ...styles.searchLensGraphic, backgroundColor: '#eef2ff', color: '#4f46e5' }}>📝</div>
+                      <h4 style={styles.emptyStateTitle}>No applications available for review.</h4>
+                      <p style={styles.emptyStateSub}>New student applications will appear here when they are submitted.</p>
+                    </div>
+                  ) : (
+                    facultyApplications.map((application) => {
+                      const status = application.review_status || 'Pending';
+                      const isPending = status === 'Pending';
+                      const isLoading = reviewLoadingId === application._id;
+
+                      return (
+                        <div key={application._id} style={styles.facultyApplicationCard}>
+                          <div style={styles.facultyApplicationTopRow}>
+                            <div>
+                              <h4 style={styles.facultyStudentName}>
+                                {application.student?.name || 'Unknown Student'}
+                              </h4>
+                              <p style={styles.facultyStudentEmail}>
+                                {application.student?.email || 'No student email'}
+                              </p>
+                            </div>
+
+                            <span
+                              style={{
+                                ...styles.reviewStatusBadge,
+                                ...(status === 'Approved'
+                                  ? styles.reviewStatusApproved
+                                  : status === 'Rejected'
+                                    ? styles.reviewStatusRejected
+                                    : styles.reviewStatusPending)
+                              }}
+                            >
+                              {status}
+                            </span>
+                          </div>
+
+                          <div style={styles.facultyDetailsGrid}>
+                            <div style={styles.facultyDetailBox}>
+                              <span style={styles.facultyDetailLabel}>Job</span>
+                              <strong style={styles.facultyDetailValue}>
+                                {application.job?.title || 'Unknown Job'}
+                              </strong>
+                            </div>
+
+                            <div style={styles.facultyDetailBox}>
+                              <span style={styles.facultyDetailLabel}>Company</span>
+                              <strong style={styles.facultyDetailValue}>
+                                {application.company?.name || 'Unknown Company'}
+                              </strong>
+                            </div>
+
+                            <div style={styles.facultyDetailBox}>
+                              <span style={styles.facultyDetailLabel}>Location</span>
+                              <strong style={styles.facultyDetailValue}>
+                                {application.job?.location || 'N/A'}
+                              </strong>
+                            </div>
+
+                            <div style={styles.facultyDetailBox}>
+                              <span style={styles.facultyDetailLabel}>Applied</span>
+                              <strong style={styles.facultyDetailValue}>
+                                {application.applied_at
+                                  ? new Date(application.applied_at).toLocaleString()
+                                  : 'N/A'}
+                              </strong>
+                            </div>
+                          </div>
+
+                          <div style={styles.inputGroup}>
+                            <label style={styles.fieldLabel}>Recommendation Note</label>
+                            <textarea
+                              value={reviewNotes[application._id] || ''}
+                              onChange={(e) =>
+                                setReviewNotes((currentNotes) => ({
+                                  ...currentNotes,
+                                  [application._id]: e.target.value
+                                }))
+                              }
+                              placeholder="Write a recommendation or review note for this student..."
+                              style={styles.facultyNoteInput}
+                              disabled={!isPending || isLoading}
+                            />
+                          </div>
+
+                          {isPending ? (
+                            <div style={styles.facultyActionRow}>
+                              <button
+                                type="button"
+                                onClick={() => handleFacultyReview(application._id, 'Approved')}
+                                style={{
+                                  ...styles.facultyApproveBtn,
+                                  ...(isLoading ? styles.disabledActionBtn : {})
+                                }}
+                                disabled={isLoading}
+                              >
+                                {isLoading ? 'Processing...' : 'Approve Application'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleFacultyReview(application._id, 'Rejected')}
+                                style={{
+                                  ...styles.facultyRejectBtn,
+                                  ...(isLoading ? styles.disabledActionBtn : {})
+                                }}
+                                disabled={isLoading}
+                              >
+                                {isLoading ? 'Processing...' : 'Reject Application'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={styles.facultyReviewedInfo}>
+                              <span>
+                                Reviewed by Faculty ID: <strong>{application.reviewed_by || 'N/A'}</strong>
+                              </span>
+                              <span>
+                                Reviewed at:{' '}
+                                <strong>
+                                  {application.reviewed_at
+                                    ? new Date(application.reviewed_at).toLocaleString()
+                                    : 'N/A'}
+                                </strong>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </section>
             </>
@@ -466,6 +741,53 @@ export default function Dashboard() {
             </>
           )}
 
+
+          {/* Feature 21: Completion Certificates */}
+          {user.role === 'Student' && (
+            <section style={styles.contentCard}>
+              <div style={styles.cardHeader}>
+                <span style={{ ...styles.cardIcon, backgroundColor: '#ecfdf5', color: '#16a34a' }}>🏆</span>
+                <div>
+                  <h3 style={styles.cardTitle}>My Completion Certificates</h3>
+                  <p style={styles.cardSub}>View certificates earned from completed internships</p>
+                </div>
+                <span style={styles.resultsBadge}>{certificates.length} certificates</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {certificates.length === 0 ? (
+                  <div style={styles.emptyIllustrationState}>
+                    <div style={{ ...styles.searchLensGraphic, backgroundColor: '#ecfdf5', color: '#16a34a' }}>🏆</div>
+                    <h4 style={styles.emptyStateTitle}>No certificates available yet.</h4>
+                    <p style={styles.emptyStateSub}>
+                      Complete internships to receive your completion certificate.
+                    </p>
+                  </div>
+                ) : (
+                  certificates.map((certificate) => (
+                    <div key={certificate._id} style={styles.dataItemRow}>
+                      <h4 style={styles.itemTitle}>
+                        {certificate.certificateId}
+                      </h4>
+
+                      <p style={styles.itemDescription}>
+                        Job: {certificate.job?.title || 'Internship'}
+                      </p>
+
+                      <div style={styles.itemMetaLine}>
+                        <span>🏢 {certificate.company?.name || 'Company'}</span>
+                        <span>•</span>
+                        <span>
+                          📅 {new Date(certificate.issueDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          )}
+
           {/* Bottom Grid Cards (Recent Applications, Upcoming Interviews, Profile Completion) */}
           {user.role === 'Student' && (
             <div style={styles.bottomStatusGrid}>
@@ -529,8 +851,8 @@ export default function Dashboard() {
               ) : notifications.map((notification) => (
                 <button
                   type="button"
-                  key={notification.id}
-                  onClick={() => markNotificationAsRead(notification.id)}
+                  key={notification._id}
+                  onClick={() => markNotificationAsRead(notification._id)}
                   style={{
                     ...styles.notificationBubble,
                     ...(notification.is_read
@@ -666,6 +988,42 @@ const styles = {
   notificationMessage: { color: '#334155', fontSize: '13px', lineHeight: '1.4' },
   notificationTime: { color: '#94a3b8', fontSize: '10px', fontWeight: '400' },
   
+  facultySummaryRow: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', marginBottom: '20px' },
+  facultySummaryCard: { padding: '14px 16px', borderRadius: '12px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '3px' },
+  facultySummaryValue: { fontSize: '22px', fontWeight: '700', color: '#0f172a' },
+  facultySummaryLabel: { fontSize: '12px', color: '#64748b', fontWeight: '600' },
+  facultyApplicationList: { display: 'flex', flexDirection: 'column', gap: '18px' },
+  facultyApplicationCard: { padding: '20px', borderRadius: '14px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', boxShadow: '0 2px 6px rgba(15,23,42,0.03)' },
+  facultyApplicationTopRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' },
+  facultyStudentName: { margin: '0 0 4px 0', fontSize: '17px', color: '#0f172a', fontWeight: '700' },
+  facultyStudentEmail: { margin: 0, fontSize: '12px', color: '#64748b' },
+  reviewStatusBadge: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '82px', padding: '6px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' },
+  reviewStatusPending: { backgroundColor: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' },
+  reviewStatusApproved: { backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' },
+  reviewStatusRejected: { backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' },
+  facultyDetailsGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px', marginBottom: '18px' },
+  facultyDetailBox: { padding: '11px 12px', borderRadius: '9px', backgroundColor: '#f8fafc', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' },
+  facultyDetailLabel: { fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  facultyDetailValue: { fontSize: '13px', color: '#334155', fontWeight: '600' },
+  facultyNoteInput: { width: '100%', minHeight: '100px', padding: '12px 14px', border: '1px solid #cbd5e1', borderRadius: '9px', backgroundColor: '#ffffff', color: '#334155', fontSize: '14px', lineHeight: '1.5', resize: 'vertical', outline: 'none', boxSizing: 'border-box' },
+  facultyActionRow: { display: 'flex', gap: '10px', marginTop: '16px' },
+  facultyApproveBtn: { backgroundColor: '#16a34a', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' },
+  facultyRejectBtn: { backgroundColor: '#dc2626', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' },
+  disabledActionBtn: { opacity: 0.6, cursor: 'not-allowed' },
+  facultyReviewedInfo: { marginTop: '16px', padding: '12px 14px', borderRadius: '9px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '12px', color: '#64748b' },
+  
+  downloadCertificateBtn: {
+    marginTop: '14px',
+    backgroundColor: '#2563eb',
+    color: '#ffffff',
+    border: 'none',
+    padding: '10px 18px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '13px'
+  },
+
   sidebarSoonUtilityCard: { backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' },
   utilLeft: { display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#0f172a' },
   utilIconSquare: { width: '32px', height: '32px', backgroundColor: '#fff7ed', color: '#f97316', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }

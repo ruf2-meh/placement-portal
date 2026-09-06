@@ -1,10 +1,34 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../database');
+const mongoose = require('mongoose');
 
-const Notification = sequelize.define('Notification', {
-    user_id: { type: DataTypes.INTEGER, allowNull: false },
-    message: { type: DataTypes.STRING, allowNull: false },
-    is_read: { type: DataTypes.BOOLEAN, defaultValue: false }
+
+const notificationSchema = new mongoose.Schema(
+{
+
+    user:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:'User',
+        required:true
+    },
+
+
+    message:{
+        type:String,
+        required:true
+    },
+
+
+    is_read:{
+        type:Boolean,
+        default:false
+    }
+
+},
+{
+    timestamps:true
 });
 
-module.exports = Notification;
+
+module.exports = mongoose.model(
+    'Notification',
+    notificationSchema
+);
