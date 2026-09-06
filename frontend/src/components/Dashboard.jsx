@@ -17,6 +17,15 @@ export default function Dashboard() {
   const [jobForm, setJobForm] = useState({ title: '', description: '', requirements: '', location: '', deadline: '' });
   const [myJobs, setMyJobs] = useState([]);
 
+  // --- Feature 16: Offer Letter States ---
+  const [offers, setOffers] = useState([]);
+  const [offerForm, setOfferForm] = useState({
+    applicationId: '', jobId: '', studentId: '',
+    jobTitle: '', position: '', salary: '', startDate: '', letterBody: ''
+  });
+  // Track which offer letter the student is viewing for print/PDF
+  const [printOffer, setPrintOffer] = useState(null);
+
   // --- Feature 6: Deadline helper ---
   const isDeadlinePassed = (deadline) => {
     if (!deadline) return false;
@@ -29,8 +38,10 @@ export default function Dashboard() {
     if (user.role === 'Student') {
       fetchJobs();
       fetchMyProjects();
+      fetchOffers('student', user.id);
     } else if (user.role === 'Company') {
       fetchCompanyJobs();
+      fetchOffers('company', user.id);
     }
   }, []);
 
@@ -124,10 +135,49 @@ export default function Dashboard() {
     }
   };
 
+  // --- Feature 16: Offer Letter Handlers ---
+  const fetchOffers = async (role, id) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/offers/${role}/${id}`);
+      setOffers(res.data);
+    } catch (err) { console.error('Error pulling offers'); }
+  };
+
+  const handleSendOffer = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('http://localhost:5000/api/offers', {
+        applicationId: offerForm.applicationId,
+        jobId:         offerForm.jobId,
+        companyId:     user.id,
+        studentId:     offerForm.studentId,
+        jobTitle:      offerForm.jobTitle,
+        position:      offerForm.position,
+        salary:        offerForm.salary,
+        startDate:     offerForm.startDate,
+        letterBody:    offerForm.letterBody
+      });
+      alert('📩 Offer letter sent successfully!');
+      setOfferForm({ applicationId: '', jobId: '', studentId: '', jobTitle: '', position: '', salary: '', startDate: '', letterBody: '' });
+      fetchOffers('company', user.id);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error sending offer letter.');
+    }
+  };
+
+  const handleWithdrawOffer = async (offerId) => {
+    if (!window.confirm('Withdraw this offer? The student will be notified.')) return;
+    try {
+      await axios.patch(`http://localhost:5000/api/offers/${offerId}/withdraw`);
+      fetchOffers('company', user.id);
+    } catch (err) { alert('Error withdrawing offer.'); }
+  };
+
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = "/";
   };
+
 
   return (
     <div style={styles.dashboardContainer}>
@@ -276,7 +326,104 @@ export default function Dashboard() {
                   ))}
                 </div>
               </section>
+
+              {/* ── Feature 16: Send Offer Letter (Company) ──────────────────── */}
+              <section style={styles.contentCard}>
+                <div style={styles.cardHeader}>
+                  <span style={{ ...styles.cardIcon, backgroundColor: '#fdf4ff', color: '#a855f7' }}>📩</span>
+                  <div>
+                    <h3 style={styles.cardTitle}>Send Offer Letter</h3>
+                    <p style={styles.cardSub}>Issue a formal digital job offer to an accepted applicant</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSendOffer} style={styles.formLayout}>
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ ...styles.inputGroup, flex: 1 }}>
+                      <label style={styles.fieldLabel}>Application ID <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input id="offer-application-id" type="text" placeholder="SQLite application record ID" value={offerForm.applicationId} onChange={e => setOfferForm({ ...offerForm, applicationId: e.target.value })} style={styles.textInput} required />
+                    </div>
+                    <div style={{ ...styles.inputGroup, flex: 1 }}>
+                      <label style={styles.fieldLabel}>Job ID <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input id="offer-job-id" type="text" placeholder="SQLite job record ID" value={offerForm.jobId} onChange={e => setOfferForm({ ...offerForm, jobId: e.target.value })} style={styles.textInput} required />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ ...styles.inputGroup, flex: 1 }}>
+                      <label style={styles.fieldLabel}>Student ID <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input id="offer-student-id" type="text" placeholder="Student's user ID" value={offerForm.studentId} onChange={e => setOfferForm({ ...offerForm, studentId: e.target.value })} style={styles.textInput} required />
+                    </div>
+                    <div style={{ ...styles.inputGroup, flex: 1 }}>
+                      <label style={styles.fieldLabel}>Job Title (for notification)</label>
+                      <input id="offer-job-title" type="text" placeholder="e.g. Full Stack Intern" value={offerForm.jobTitle} onChange={e => setOfferForm({ ...offerForm, jobTitle: e.target.value })} style={styles.textInput} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ ...styles.inputGroup, flex: 1 }}>
+                      <label style={styles.fieldLabel}>Position / Role</label>
+                      <input id="offer-position" type="text" placeholder="e.g. Software Engineer Intern" value={offerForm.position} onChange={e => setOfferForm({ ...offerForm, position: e.target.value })} style={styles.textInput} />
+                    </div>
+                    <div style={{ ...styles.inputGroup, flex: 1 }}>
+                      <label style={styles.fieldLabel}>Salary / Stipend</label>
+                      <input id="offer-salary" type="text" placeholder="e.g. $1,500/month" value={offerForm.salary} onChange={e => setOfferForm({ ...offerForm, salary: e.target.value })} style={styles.textInput} />
+                    </div>
+                  </div>
+                  <div style={styles.inputGroup}>
+                    <label style={styles.fieldLabel}>Start Date</label>
+                    <input id="offer-start-date" type="date" value={offerForm.startDate} onChange={e => setOfferForm({ ...offerForm, startDate: e.target.value })} style={styles.textInput} />
+                  </div>
+                  <div style={styles.inputGroup}>
+                    <label style={styles.fieldLabel}>Offer Letter Body</label>
+                    <textarea id="offer-letter-body" placeholder="Dear [Student Name],&#10;&#10;We are pleased to offer you the position of..." value={offerForm.letterBody} onChange={e => setOfferForm({ ...offerForm, letterBody: e.target.value })} style={{ ...styles.textInput, minHeight: '120px', resize: 'vertical' }} />
+                  </div>
+                  <button id="offer-send-btn" type="submit" style={{ ...styles.primaryActionBtn, backgroundColor: '#a855f7' }}>📩 Send Offer Letter</button>
+                </form>
+              </section>
+
+              {/* ── Feature 16: Sent Offers List (Company) ───────────────────── */}
+              <section style={styles.contentCard}>
+                <div style={styles.cardHeader}>
+                  <span style={{ ...styles.cardIcon, backgroundColor: '#fdf4ff', color: '#a855f7' }}>📋</span>
+                  <div>
+                    <h3 style={styles.cardTitle}>Sent Offer Letters</h3>
+                    <p style={styles.cardSub}>Track and manage your issued offer letters</p>
+                  </div>
+                  <span style={styles.resultsBadge}>{offers.length} total</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {offers.length === 0 ? (
+                    <div style={styles.emptyIllustrationState}>
+                      <div style={{ ...styles.searchLensGraphic, backgroundColor: '#fdf4ff', color: '#a855f7' }}>📩</div>
+                      <h4 style={styles.emptyStateTitle}>No offers sent yet.</h4>
+                      <p style={styles.emptyStateSub}>Use the form above to issue a formal digital offer letter to an accepted applicant.</p>
+                    </div>
+                  ) : offers.map(offer => (
+                    <div key={offer._id} style={{ ...styles.dataItemRow, borderLeft: `4px solid ${offer.status === 'withdrawn' ? '#94a3b8' : offer.status === 'accepted' ? '#10b981' : '#a855f7'}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{ ...styles.itemTitle, color: '#a855f7' }}>📩 {offer.position || 'Offer Letter'}</h4>
+                          <div style={styles.itemMetaLine}>
+                            <span>👤 Student ID: <strong>{String(offer.student)}</strong></span>
+                            <span>•</span>
+                            <span>💰 {offer.salary || 'Salary TBD'}</span>
+                            {offer.startDate && <><span>•</span><span>📅 Start: {new Date(offer.startDate).toLocaleDateString()}</span></>}
+                          </div>
+                          {offer.letterBody && <p style={{ ...styles.itemDescription, marginBottom: '8px', fontStyle: 'italic', color: '#64748b', fontSize: '13px' }}>{offer.letterBody.slice(0, 100)}{offer.letterBody.length > 100 ? '…' : ''}</p>}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', marginLeft: '16px' }}>
+                          <span style={{ ...styles.soonBadge, backgroundColor: offer.status === 'withdrawn' ? '#f1f5f9' : offer.status === 'accepted' ? '#f0fdf4' : '#fdf4ff', color: offer.status === 'withdrawn' ? '#64748b' : offer.status === 'accepted' ? '#16a34a' : '#a855f7', textTransform: 'uppercase' }}>{offer.status}</span>
+                          {offer.status !== 'withdrawn' && (
+                            <button id={`offer-withdraw-${offer._id}`} onClick={() => handleWithdrawOffer(offer._id)} style={{ ...styles.signOutBtn, fontSize: '12px', padding: '5px 10px', color: '#b91c1c', borderColor: '#fecaca' }}>🔙 Withdraw</button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
             </>
+
           ) : (
             <>
               {/* Student Search Operations Block */}
@@ -408,7 +555,78 @@ export default function Dashboard() {
                   ))}
                 </div>
               </section>
+
+              {/* ── Feature 16: Received Offers (Student) ───────────────────── */}
+              <section style={styles.contentCard}>
+                <div style={styles.cardHeader}>
+                  <span style={{ ...styles.cardIcon, backgroundColor: '#fdf4ff', color: '#a855f7' }}>📩</span>
+                  <div>
+                    <h3 style={styles.cardTitle}>My Offer Letters</h3>
+                    <p style={styles.cardSub}>Official job offers received from companies</p>
+                  </div>
+                  <span style={styles.resultsBadge}>{offers.length} received</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {offers.length === 0 ? (
+                    <div style={styles.emptyIllustrationState}>
+                      <div style={{ ...styles.searchLensGraphic, backgroundColor: '#fdf4ff', color: '#a855f7' }}>📩</div>
+                      <h4 style={styles.emptyStateTitle}>No offers yet.</h4>
+                      <p style={styles.emptyStateSub}>When a company sends you a formal offer letter, it will appear here. Keep applying!</p>
+                    </div>
+                  ) : offers.map(offer => (
+                    <div key={offer._id} style={{ ...styles.dataItemRow, borderLeft: `4px solid ${offer.status === 'withdrawn' ? '#94a3b8' : offer.status === 'accepted' ? '#10b981' : '#a855f7'}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{ ...styles.itemTitle, color: '#a855f7' }}>📩 {offer.position || 'Job Offer'}</h4>
+                          <div style={styles.itemMetaLine}>
+                            <span>💰 {offer.salary || 'Salary TBD'}</span>
+                            {offer.startDate && <><span>•</span><span>📅 Start: {new Date(offer.startDate).toLocaleDateString()}</span></>}
+                            <span>•</span>
+                            <span style={{ ...styles.soonBadge, backgroundColor: offer.status === 'withdrawn' ? '#f1f5f9' : offer.status === 'accepted' ? '#f0fdf4' : '#fdf4ff', color: offer.status === 'withdrawn' ? '#64748b' : offer.status === 'accepted' ? '#16a34a' : '#a855f7', textTransform: 'uppercase' }}>{offer.status}</span>
+                          </div>
+                          {offer.letterBody && <p style={{ ...styles.itemDescription, marginBottom: '12px', whiteSpace: 'pre-wrap' }}>{offer.letterBody}</p>}
+                        </div>
+                      </div>
+                      {/* Print-to-PDF: show printable offer letter area and Download button */}
+                      {offer.status !== 'withdrawn' && (
+                        <div style={{ marginTop: '12px', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
+                          <button
+                            id={`offer-view-pdf-${offer._id}`}
+                            onClick={() => { setPrintOffer(offer._id === printOffer ? null : offer._id); }}
+                            style={{ ...styles.signOutBtn, fontSize: '12px', padding: '6px 14px', color: '#a855f7', borderColor: '#e9d5ff' }}
+                          >
+                            {printOffer === offer._id ? '🔼 Close Letter' : '📄 View Offer Letter'}
+                          </button>
+                          {printOffer === offer._id && (
+                            <div style={{ marginTop: '16px' }}>
+                              {/* Printable area — same pattern as ResumeBuilder.jsx */}
+                              <div id={`offer-print-area-${offer._id}`} className="offer-print-area" style={styles.offerLetterDoc}>
+                                <h2 style={styles.offerLetterTitle}>Official Job Offer Letter</h2>
+                                <p style={styles.offerLetterMeta}>Position: <strong>{offer.position || '—'}</strong></p>
+                                <p style={styles.offerLetterMeta}>Salary / Stipend: <strong>{offer.salary || 'To be confirmed'}</strong></p>
+                                {offer.startDate && <p style={styles.offerLetterMeta}>Start Date: <strong>{new Date(offer.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong></p>}
+                                <hr style={{ margin: '20px 0', borderColor: '#e2e8f0' }} />
+                                <div style={styles.offerLetterBody}>{offer.letterBody || 'No letter body provided.'}</div>
+                                <div style={{ marginTop: '40px', borderTop: '1px solid #334155', paddingTop: '10px', fontSize: '12px', color: '#64748b' }}>InternSphere — Digital Offer Letter • Generated {new Date().toLocaleDateString()}</div>
+                              </div>
+                              <button
+                                id={`offer-download-pdf-${offer._id}`}
+                                onClick={() => window.print()}
+                                style={{ ...styles.primaryActionBtn, marginTop: '12px', backgroundColor: '#a855f7' }}
+                              >
+                                🖨️ Download PDF
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
             </>
+
           )}
 
           {/* Bottom Grid Cards (Recent Applications, Upcoming Interviews, Profile Completion) */}
@@ -562,5 +780,21 @@ const styles = {
   
   sidebarSoonUtilityCard: { backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' },
   utilLeft: { display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#0f172a' },
-  utilIconSquare: { width: '32px', height: '32px', backgroundColor: '#fff7ed', color: '#f97316', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }
+  utilIconSquare: { width: '32px', height: '32px', backgroundColor: '#fff7ed', color: '#f97316', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' },
+
+  // --- Feature 16: Offer Letter print-preview styles ---
+  offerLetterDoc: { backgroundColor: '#fff', border: '2px solid #e2e8f0', borderRadius: '12px', padding: '40px', maxWidth: '700px', fontFamily: 'Georgia, "Times New Roman", serif', lineHeight: '1.7', color: '#1e293b' },
+  offerLetterTitle: { fontSize: '22px', fontWeight: '700', color: '#1e40af', margin: '0 0 20px 0', textAlign: 'center', letterSpacing: '-0.3px' },
+  offerLetterMeta: { margin: '6px 0', fontSize: '14px', color: '#334155' },
+  offerLetterBody: { fontSize: '14px', whiteSpace: 'pre-wrap', color: '#334155', lineHeight: '1.8' }
 };
+
+/* ── Print CSS: when window.print() is called only the .offer-print-area is shown ── */
+const printStyle = document.createElement('style');
+printStyle.innerHTML = `
+  @media print {
+    body > * { display: none !important; }
+    .offer-print-area { display: block !important; position: fixed; top: 0; left: 0; width: 100%; background: #fff; z-index: 9999; padding: 40px; box-sizing: border-box; }
+  }
+`;
+document.head.appendChild(printStyle);
