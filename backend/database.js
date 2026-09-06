@@ -1,13 +1,27 @@
 const mongoose = require('mongoose');
 
+
 const connectDB = async () => {
+
     try {
-        await mongoose.connect('mongodb://127.0.0.1:27017/internsphere');
-        console.log('🎉 Local MongoDB Connected Successfully!');
-    } catch (err) {
-        console.error('❌ Database Connection Error:', err.message);
+
+        await mongoose.connect(process.env.MONGO_URI);
+
+        console.log("✅ MongoDB Connected Successfully");
+        console.log("Database Name:", mongoose.connection.name);
+
+    } catch (error) {
+
+        console.error(
+            "❌ MongoDB Connection Error:",
+            error.message
+        );
+
         process.exit(1);
+
     }
+
 };
+
 
 module.exports = connectDB;

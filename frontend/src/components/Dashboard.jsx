@@ -1,86 +1,328 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
-export default function Dashboard({ user, profile, notifications = [], onSignOut }) {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+export default function Dashboard() {
+  const user = JSON.parse(localStorage.getItem('user')) || { id: 1, name: "Rufaida Mehzabin", role: "Student" };
+  
+  const [notifications, setNotifications] = useState([]);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [jobs, setJobs] = useState([]);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [projectForm, setProjectForm] = useState({ title: '', description: '', link: '' });
+  const [myProjects, setMyProjects] = useState([]);
+  const [certificates, setCertificates] = useState([]);
+  const [applyStatus, setApplyStatus] = useState({});
+
+  // --- Company States ---
+  const [jobForm, setJobForm] = useState({ title: '', description: '', requirements: '', location: '', deadline: '' });
+  const [myJobs, setMyJobs] = useState([]);
+
+  // --- Faculty States ---
+  const [facultyApplications, setFacultyApplications] = useState([]);
+  const [reviewNotes, setReviewNotes] = useState({});
+  const [reviewLoadingId, setReviewLoadingId] = useState(null);
+
+  const unreadCount = notifications.filter((notification) => !notification.is_read).length;
+  const pendingFacultyReviews = facultyApplications.filter(
+    (application) => application.review_status === 'Pending'
+  ).length;
+  const completedFacultyReviews = facultyApplications.filter(
+    (application) => application.review_status !== 'Pending'
+  ).length;
+
+  useEffect(() => {
+    fetchNotifications();
+    if (user.role === 'Student') {
+      fetchJobs();
+      fetchMyProjects();
+      fetchCertificates();
+    } else if (user.role === 'Company') {
+      fetchCompanyJobs();
+    } else if (user.role === 'Faculty') {
+      fetchFacultyApplications();
+    }
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/portal/notifications/${user.id}`);
+      setNotifications(res.data);
+    } catch (err) {
+      console.error("Error pulling notifications", err);
+    }
+  };
+
+  const handleBellClick = () => {
+    setNotificationOpen((current) => !current);
+    fetchNotifications();
+  };
+
+  const markNotificationAsRead = async (notificationId) => {
+    const selectedNotification = notifications.find(
+      (notification) => notification._id === notificationId
+    );
+
+    if (!selectedNotification || selectedNotification.is_read) {
+      return;
+    }
+
+    try {
+      await axios.patch(
+        `http://localhost:5000/api/portal/notifications/${notificationId}/read`,
+        { user_id: user.id }
+      );
+
+      setNotifications((currentNotifications) =>
+        currentNotifications.map((notification) =>
+          notification._id === notificationId
+            ? { ...notification, is_read: true }
+            : notification
+        )
+      );
+    } catch (err) {
+      console.error("Error marking notification as read", err);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    if (unreadCount === 0) {
+      return;
+    }
+
+    try {
+      await axios.patch(
+        `http://localhost:5000/api/portal/notifications/${user.id}/read-all`
+      );
+
+      setNotifications((currentNotifications) =>
+        currentNotifications.map((notification) => ({
+          ...notification,
+          is_read: true
+        }))
+      );
+    } catch (err) {
+      console.error("Error marking all notifications as read", err);
+    }
+  };
+
+  const formatNotificationTime = (createdAt) => {
+    if (!createdAt) {
+      return '';
+    }
+
+    return new Date(createdAt).toLocaleString();
+  };
+
+  const fetchJobs = async (keyword = '') => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/portal/jobs/search?keyword=${keyword}`);
+      setJobs(res.data);
+    } catch (err) { console.error("Error pulling job board metrics"); }
+  };
+
+  const fetchCompanyJobs = async () => {
+    try {
+      // Fetch jobs specifically filtered by this company's ID
+      const res = await axios.get(`http://localhost:5000/api/portal/jobs/company/${user.id}`);
+      setMyJobs(res.data);
+    } catch (err) { console.error("Error pulling company job list"); }
+  };
+
+  const fetchFacultyApplications = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/portal/faculty/applications');
+      setFacultyApplications(res.data);
+
+      const savedNotes = {};
+      res.data.forEach((application) => {
+        savedNotes[application._id] = application.recommendation_note || '';
+      });
+      setReviewNotes(savedNotes);
+    } catch (err) {
+      console.error("Error pulling faculty application review list", err);
+    }
+  };
+
+  const handleFacultyReview = async (applicationId, reviewStatus) => {
+    try {
+      setReviewLoadingId(applicationId);
+
+      const res = await axios.patch(
+        `http://localhost:5000/api/portal/faculty/applications/${applicationId}/review`,
+        {
+          faculty_id: user.id,
+          review_status: reviewStatus,
+          recommendation_note: reviewNotes[applicationId] || ''
+        }
+      );
+
+      alert(res.data.message);
+      await fetchFacultyApplications();
+      await fetchNotifications();
+    } catch (err) {
+      alert(err.response?.data?.message || "Unable to review this application.");
+    } finally {
+      setReviewLoadingId(null);
+    }
+  };
+
+  const fetchMyProjects = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/portal/projects/${user.id}`);
+      setMyProjects(res.data);
+    } catch (err) { console.error("Error pulling student showcase"); }
+  };
+
+
+  const fetchCertificates = async () => {
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/certificates/student/${user.id}`
+      );
+      setCertificates(res.data);
+    } catch (err) {
+      console.error("Error pulling certificates", err);
+    }
+  };
+
+  const handleDownloadCertificate = (certificateId) => {
+    window.open(
+      `http://localhost:5000/api/certificates/download/${certificateId}`,
+      '_blank'
+    );
+  };
+
+
+  const handlePostJob = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('http://localhost:5000/api/jobs', { ...jobForm, company_id: user.id });
+      alert("🎉 Job posted successfully into backend system!");
+      setJobForm({ title: '', description: '', requirements: '', location: '', deadline: '' });
+      fetchNotifications();
+      fetchCompanyJobs(); // Instantly refresh the company list on completion
+    } catch (err) { alert("Error dispatching job posting details."); }
+  };
+
+  const handleAddProject = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('http://localhost:5000/api/portal/projects', { ...projectForm, student_id: user.id });
+      alert("✅ Project showcase linked to your profile!");
+      setProjectForm({ title: '', description: '', link: '' });
+      fetchMyProjects();
+    } catch (err) { alert("Error adding showcase record."); }
+  };
+
+  const handleApply = async (jobId) => {
+    try {
+      setApplyStatus((current) => ({
+        ...current,
+        [jobId]: { type: 'loading', message: 'Checking eligibility...' }
+      }));
+
+      const res = await axios.post('http://localhost:5000/api/portal/jobs/apply', {
+        job_id: jobId,
+        student_id: user.id
+      });
+
+      setApplyStatus((current) => ({
+        ...current,
+        [jobId]: { type: 'success', message: res.data.message }
+      }));
+
+      fetchNotifications();
+
+    } catch (err) {
+      setApplyStatus((current) => ({
+        ...current,
+        [jobId]: {
+          type: 'error',
+          message: err.response?.data?.message || "You do not meet the job requirements."
+        }
+      }));
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = "/";
+  };
 
   return (
     <div style={styles.dashboardContainer}>
-      {/* Navigation Bar */}
+      
+      {/* Top Professional Navbar */}
       <nav style={styles.navbar}>
         <div style={styles.navLeft}>
-          <span style={styles.logoBadge}>🎓</span>
-          <span style={styles.logoText}>finx</span>
-          <span style={styles.divider}>|</span>
-          <button
-            style={{
-              ...styles.navTabBtn,
-              fontWeight: activeTab === 'overview' ? '700' : '500',
-              color: activeTab === 'overview' ? '#2563eb' : '#64748b'
-            }}
-            onClick={() => setActiveTab('overview')}
-          >
-            Dashboard
-          </button>
-          <button
-            style={{
-              ...styles.navTabBtn,
-              fontWeight: activeTab === 'profile' ? '700' : '500',
-              color: activeTab === 'profile' ? '#2563eb' : '#64748b'
-            }}
-            onClick={() => setActiveTab('profile')}
-          >
-            Profile
-          </button>
+          <div style={styles.logoBadge}>🕒</div>
+          <span style={styles.logoText}>InternSphere</span>
+          <div style={styles.divider}>|</div>
+          <span style={styles.breadcrumbLink}>Dashboard</span>
+          <span style={styles.breadcrumbArrow}>&gt;</span>
+          <span style={styles.breadcrumbActive}>{user.role}</span>
         </div>
-
         <div style={styles.navRight}>
-          {/* Notification Menu */}
           <div style={styles.notificationWrapper}>
             <button
+              type="button"
+              onClick={handleBellClick}
               style={styles.notificationBellButton}
-              onClick={() => setShowNotifications(!showNotifications)}
+              aria-label="Open notifications"
             >
               🔔
-              {notifications.some((n) => !n.read) && (
+              {unreadCount > 0 && (
                 <span style={styles.notificationBadge}>
-                  {notifications.filter((n) => !n.read).length}
+                  {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
             </button>
 
-            {showNotifications && (
+            {notificationOpen && (
               <div style={styles.notificationDropdown}>
                 <div style={styles.notificationDropdownHeader}>
                   <div>
                     <h4 style={styles.notificationDropdownTitle}>Notifications</h4>
                     <span style={styles.notificationDropdownSubtitle}>
-                      {notifications.filter((n) => !n.read).length} unread
+                      {unreadCount} unread
                     </span>
                   </div>
-                  <button style={styles.markAllButton}>Mark all as read</button>
+
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={markAllNotificationsAsRead}
+                      style={styles.markAllButton}
+                    >
+                      Mark all as read
+                    </button>
+                  )}
                 </div>
 
                 <div style={styles.notificationDropdownList}>
                   {notifications.length === 0 ? (
-                    <div style={styles.emptyIllustrationState}>
-                      <span style={styles.bellEmptyIcon}>🔔</span>
-                      <p style={styles.notificationEmptyText}>No notifications yet</p>
-                    </div>
+                    <p style={styles.notificationEmptyText}>
+                      No notifications yet.
+                    </p>
                   ) : (
-                    notifications.map((item, idx) => (
+                    notifications.slice(0, 6).map((notification) => (
                       <button
-                        key={idx}
+                        type="button"
+                        key={notification._id}
+                        onClick={() => markNotificationAsRead(notification._id)}
                         style={{
                           ...styles.notificationDropdownItem,
-                          ...(item.read
+                          ...(notification.is_read
                             ? styles.notificationDropdownItemRead
                             : styles.notificationDropdownItemUnread)
                         }}
                       >
-                        <span style={styles.notificationMessage}>{item.message}</span>
-                        <span style={styles.notificationTime}>{item.time || 'Just now'}</span>
+                        <span style={styles.notificationMessage}>
+                          {notification.message}
+                        </span>
+                        <span style={styles.notificationTime}>
+                          {formatNotificationTime(notification.createdAt)}
+                        </span>
                       </button>
                     ))
                   )}
@@ -88,432 +330,701 @@ export default function Dashboard({ user, profile, notifications = [], onSignOut
               </div>
             )}
           </div>
-
-          {/* Profile Header */}
-          <div style={styles.profileHeaderBtn}>
-            <div style={styles.userAvatar}>
-              {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-            </div>
-            <div style={styles.userInfo}>
-              <span style={styles.userName}>{user?.name || 'User'}</span>
-              <span style={styles.userRoleText}>{user?.role || 'Student'}</span>
-            </div>
+          <div style={styles.userAvatar}>{user.name ? user.name.split(' ').map(n => n[0]).join('') : 'U'}</div>
+          <div style={styles.userInfo}>
+            <span style={styles.userName}>{user.name}</span>
+            <span style={styles.userRoleText}>{user.role}</span>
           </div>
-
-          <button style={styles.signOutBtn} onClick={onSignOut}>
+          <button onClick={handleLogout} style={styles.signOutBtn}>
             <span>🚪</span> Sign Out
           </button>
         </div>
       </nav>
 
-      {/* Hero Banner */}
-      <section style={styles.heroBanner}>
+      {/* Hero Welcome Banner */}
+      <div style={styles.heroBanner}>
         <div style={styles.heroLeft}>
-          <span style={styles.workspacePill}>Student Workspace</span>
-          <h1 style={styles.heroTitle}>Welcome back, {user?.name || 'Student'}! 👋</h1>
+          <div style={styles.workspacePill}>● {user.role} Workspace</div>
+          <h1 style={styles.heroTitle}>Welcome back, {user.name} 👋</h1>
           <p style={styles.heroSubtitle}>
-            Track opportunities, manage application progress, and build out your developer profile in one central hub.
+            {user.role === 'Student'
+              ? "Search internships, manage your portfolio, and stay updated with important notifications."
+              : user.role === 'Company'
+                ? "Broadcast fresh internship opportunities, review applicant project history, and track team hiring milestones."
+                : "Review student applications, add recommendation notes, and approve or reject submissions before company review."}
           </p>
-        </div>
-      </section>
 
-      {/* Workspace Layout */}
-      <div style={styles.workspaceLayout}>
-        {/* Left Column */}
-        <div style={styles.leftColumn}>
-          {/* Main Card */}
-          <div style={styles.contentCard}>
-            <div style={styles.cardHeader}>
-              <div style={{ ...styles.cardIcon, backgroundColor: '#eff6ff', color: '#2563eb' }}>
-                🔍
-              </div>
-              <div>
-                <h3 style={styles.cardTitle}>Explore Opportunities</h3>
-                <p style={styles.cardSub}>Search for loans, internships, or open projects</p>
-              </div>
-              <span style={styles.resultsBadge}>Active</span>
+          <div style={styles.metricsRow}>
+            <div style={styles.metricCard}>
+              <span style={styles.metricValue}>
+                {user.role === 'Student'
+                  ? jobs.length
+                  : user.role === 'Company'
+                    ? myJobs.length
+                    : facultyApplications.length}
+              </span>
+              <span style={styles.metricLabel}>
+                {user.role === 'Student'
+                  ? 'Applications'
+                  : user.role === 'Company'
+                    ? 'Active Posts'
+                    : 'Applications'}
+              </span>
             </div>
-
-            <div style={styles.searchBarRow}>
-              <input
-                type="text"
-                placeholder="Search by role, skill, or keyword..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={styles.searchInputField}
-              />
-              <button style={styles.primaryActionBtn}>Search</button>
+            <div style={styles.metricCard}>
+              <span style={styles.metricValue}>
+                {user.role === 'Faculty' ? pendingFacultyReviews : 0}
+              </span>
+              <span style={styles.metricLabel}>
+                {user.role === 'Faculty' ? 'Pending Review' : 'Saved Jobs'}
+              </span>
+            </div>
+            <div style={styles.metricCard}>
+              <span style={styles.metricValue}>
+                {user.role === 'Faculty' ? completedFacultyReviews : '—'}
+              </span>
+              <span style={styles.metricLabel}>
+                {user.role === 'Faculty' ? 'Reviewed' : 'Profile Score'}
+              </span>
             </div>
           </div>
+        </div>
+        <div style={styles.heroIllustration}>
+          <div style={styles.graphicWindow}>
+            <div style={styles.graphicLines}></div>
+          </div>
+        </div>
+      </div>
 
-          {/* Profile Form Card */}
-          {activeTab === 'profile' && (
-            <div style={styles.contentCard}>
+      {/* Main Multi-Column Split Workspace */}
+      <div style={styles.workspaceLayout}>
+        
+        {/* Left Side Active System Utilities */}
+        <div style={styles.leftColumn}>
+          {user.role === 'Company' ? (
+            <>
+              {/* Form Component */}
+              <section style={styles.contentCard}>
+                <div style={styles.cardHeader}>
+                  <span style={{ ...styles.cardIcon, backgroundColor: '#eff6ff', color: '#2563eb' }}>💼</span>
+                  <div>
+                    <h3 style={styles.cardTitle}>Post a New Job Opening</h3>
+                    <p style={styles.cardSub}>Provide detailed requirements for target students</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handlePostJob} style={styles.formLayout}>
+                  <div style={styles.inputGroup}>
+                    <label style={styles.fieldLabel}>Job Title <span style={{color: '#ef4444'}}>*</span></label>
+                    <input type="text" placeholder="e.g. Full Stack Developer Intern" value={jobForm.title} onChange={e => setJobForm({...jobForm, title: e.target.value})} style={styles.textInput} required />
+                  </div>
+                  
+                  <div style={styles.inputGroup}>
+                    <label style={styles.fieldLabel}>Job Description <span style={{color: '#ef4444'}}>*</span></label>
+                    <textarea placeholder="Outline day-to-day operations and stack tools..." value={jobForm.description} onChange={e => setJobForm({...jobForm, description: e.target.value})} style={{...styles.textInput, minHeight: '100px', resize: 'vertical'}} required />
+                  </div>
+
+                  <div style={{display: 'flex', gap: '16px'}}>
+                    <div style={{...styles.inputGroup, flex: 1}}>
+                      <label style={styles.fieldLabel}>Requirements</label>
+                      <input type="text" placeholder="e.g. React, MySQL, PHP" value={jobForm.requirements} onChange={e => setJobForm({...jobForm, requirements: e.target.value})} style={styles.textInput} />
+                    </div>
+                    <div style={{...styles.inputGroup, flex: 1}}>
+                      <label style={styles.fieldLabel}>Location</label>
+                      <input type="text" placeholder="e.g. Remote / On-site" value={jobForm.location} onChange={e => setJobForm({...jobForm, location: e.target.value})} style={styles.textInput} />
+                    </div>
+                  </div>
+
+                  <div style={styles.inputGroup}>
+                    <label style={styles.fieldLabel}>Application Deadline Date <span style={{color: '#ef4444'}}>*</span></label>
+                    <input type="date" value={jobForm.deadline} onChange={e => setJobForm({...jobForm, deadline: e.target.value})} style={styles.textInput} required />
+                  </div>
+
+                  <button type="submit" style={styles.primaryActionBtn}>+ Publish Job Post</button>
+                </form>
+              </section>
+
+              {/* Company Job Openings Management Component */}
+              <section style={styles.contentCard}>
+                <div style={styles.cardHeader}>
+                  <span style={{ ...styles.cardIcon, backgroundColor: '#f0fdf4', color: '#16a34a' }}>📋</span>
+                  <div>
+                    <h3 style={styles.cardTitle}>Your Active Job Postings</h3>
+                    <p style={styles.cardSub}>Track and manage your listed internal positions</p>
+                  </div>
+                  <span style={styles.resultsBadge}>{myJobs.length} active</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '10px' }}>
+                  {myJobs.length === 0 ? (
+                    <div style={styles.emptyIllustrationState}>
+                      <div style={{...styles.searchLensGraphic, backgroundColor: '#f0fdf4', color: '#16a34a'}}>💼</div>
+                      <h4 style={styles.emptyStateTitle}>No listings posted yet.</h4>
+                      <p style={styles.emptyStateSub}>Fill out the form above to deploy your very first internship opening onto the platform feed.</p>
+                    </div>
+                  ) : myJobs.map(job => (
+                    <div key={job.id} style={styles.dataItemRow}>
+                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                        <div>
+                          <h4 style={styles.itemTitle}>{job.title}</h4>
+                          <p style={styles.itemDescription}>{job.description}</p>
+                          <div style={{...styles.itemMetaLine, marginBottom: 0}}>
+                            <span>📍 {job.location || 'Remote'}</span>
+                            <span>•</span>
+                            <span>📝 Skills: <strong>{job.requirements || 'N/A'}</strong></span>
+                            <span>•</span>
+                            <span>⏰ Deadline: <strong style={{ color: '#ef4444' }}>{job.deadline}</strong></span>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '12px', padding: '6px 12px', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '20px', fontWeight: '600' }}>
+                          Live Feed
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </>
+          ) : user.role === 'Faculty' ? (
+            <>
+              {/* Faculty Application Review Workspace */}
+              <section style={styles.contentCard}>
+                <div style={styles.cardHeader}>
+                  <span style={{ ...styles.cardIcon, backgroundColor: '#eef2ff', color: '#4f46e5' }}>📝</span>
+                  <div>
+                    <h3 style={styles.cardTitle}>Student Application Reviews</h3>
+                    <p style={styles.cardSub}>Review applications and add recommendation notes before company submission</p>
+                  </div>
+                  <span style={styles.resultsBadge}>{facultyApplications.length} applications</span>
+                </div>
+
+                <div style={styles.facultySummaryRow}>
+                  <div style={styles.facultySummaryCard}>
+                    <span style={styles.facultySummaryValue}>{pendingFacultyReviews}</span>
+                    <span style={styles.facultySummaryLabel}>Pending</span>
+                  </div>
+                  <div style={styles.facultySummaryCard}>
+                    <span style={styles.facultySummaryValue}>{completedFacultyReviews}</span>
+                    <span style={styles.facultySummaryLabel}>Reviewed</span>
+                  </div>
+                </div>
+
+                <div style={styles.facultyApplicationList}>
+                  {facultyApplications.length === 0 ? (
+                    <div style={styles.emptyIllustrationState}>
+                      <div style={{ ...styles.searchLensGraphic, backgroundColor: '#eef2ff', color: '#4f46e5' }}>📝</div>
+                      <h4 style={styles.emptyStateTitle}>No applications available for review.</h4>
+                      <p style={styles.emptyStateSub}>New student applications will appear here when they are submitted.</p>
+                    </div>
+                  ) : (
+                    facultyApplications.map((application) => {
+                      const status = application.review_status || 'Pending';
+                      const isPending = status === 'Pending';
+                      const isLoading = reviewLoadingId === application._id;
+
+                      return (
+                        <div key={application._id} style={styles.facultyApplicationCard}>
+                          <div style={styles.facultyApplicationTopRow}>
+                            <div>
+                              <h4 style={styles.facultyStudentName}>
+                                {application.student?.name || 'Unknown Student'}
+                              </h4>
+                              <p style={styles.facultyStudentEmail}>
+                                {application.student?.email || 'No student email'}
+                              </p>
+                            </div>
+
+                            <span
+                              style={{
+                                ...styles.reviewStatusBadge,
+                                ...(status === 'Approved'
+                                  ? styles.reviewStatusApproved
+                                  : status === 'Rejected'
+                                    ? styles.reviewStatusRejected
+                                    : styles.reviewStatusPending)
+                              }}
+                            >
+                              {status}
+                            </span>
+                          </div>
+
+                          <div style={styles.facultyDetailsGrid}>
+                            <div style={styles.facultyDetailBox}>
+                              <span style={styles.facultyDetailLabel}>Job</span>
+                              <strong style={styles.facultyDetailValue}>
+                                {application.job?.title || 'Unknown Job'}
+                              </strong>
+                            </div>
+
+                            <div style={styles.facultyDetailBox}>
+                              <span style={styles.facultyDetailLabel}>Company</span>
+                              <strong style={styles.facultyDetailValue}>
+                                {application.company?.name || 'Unknown Company'}
+                              </strong>
+                            </div>
+
+                            <div style={styles.facultyDetailBox}>
+                              <span style={styles.facultyDetailLabel}>Location</span>
+                              <strong style={styles.facultyDetailValue}>
+                                {application.job?.location || 'N/A'}
+                              </strong>
+                            </div>
+
+                            <div style={styles.facultyDetailBox}>
+                              <span style={styles.facultyDetailLabel}>Applied</span>
+                              <strong style={styles.facultyDetailValue}>
+                                {application.applied_at
+                                  ? new Date(application.applied_at).toLocaleString()
+                                  : 'N/A'}
+                              </strong>
+                            </div>
+                          </div>
+
+                          <div style={styles.inputGroup}>
+                            <label style={styles.fieldLabel}>Recommendation Note</label>
+                            <textarea
+                              value={reviewNotes[application._id] || ''}
+                              onChange={(e) =>
+                                setReviewNotes((currentNotes) => ({
+                                  ...currentNotes,
+                                  [application._id]: e.target.value
+                                }))
+                              }
+                              placeholder="Write a recommendation or review note for this student..."
+                              style={styles.facultyNoteInput}
+                              disabled={!isPending || isLoading}
+                            />
+                          </div>
+
+                          {isPending ? (
+                            <div style={styles.facultyActionRow}>
+                              <button
+                                type="button"
+                                onClick={() => handleFacultyReview(application._id, 'Approved')}
+                                style={{
+                                  ...styles.facultyApproveBtn,
+                                  ...(isLoading ? styles.disabledActionBtn : {})
+                                }}
+                                disabled={isLoading}
+                              >
+                                {isLoading ? 'Processing...' : 'Approve Application'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleFacultyReview(application._id, 'Rejected')}
+                                style={{
+                                  ...styles.facultyRejectBtn,
+                                  ...(isLoading ? styles.disabledActionBtn : {})
+                                }}
+                                disabled={isLoading}
+                              >
+                                {isLoading ? 'Processing...' : 'Reject Application'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={styles.facultyReviewedInfo}>
+                              <span>
+                                Reviewed by Faculty ID: <strong>{application.reviewed_by || 'N/A'}</strong>
+                              </span>
+                              <span>
+                                Reviewed at:{' '}
+                                <strong>
+                                  {application.reviewed_at
+                                    ? new Date(application.reviewed_at).toLocaleString()
+                                    : 'N/A'}
+                                </strong>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+            </>
+          ) : (
+            <>
+              {/* Student Search Operations Block */}
+              <section style={styles.contentCard}>
+                <div style={styles.cardHeader}>
+                  <span style={{ ...styles.cardIcon, backgroundColor: '#eff6ff', color: '#2563eb' }}>🔍</span>
+                  <div>
+                    <h3 style={styles.cardTitle}>Search Internship Opportunities</h3>
+                    <p style={styles.cardSub}>Browse and filter available positions</p>
+                  </div>
+                  <span style={styles.resultsBadge}>{jobs.length} results</span>
+                </div>
+
+                <div style={styles.searchBarRow}>
+                  <span style={styles.searchInnerIcon}>🔍</span>
+                  <input type="text" placeholder="Filter by Job Title or Location..." value={searchKeyword} onChange={e => setSearchKeyword(e.target.value)} style={styles.searchInputField} />
+                  <button onClick={() => fetchJobs(searchKeyword)} style={styles.primaryActionBtn}>Search</button>
+                </div>
+
+                {/* Aesthetic Filter Chips */}
+                <div style={styles.filterChipsRow}>
+                  {['Remote', 'On-site', 'Hybrid', 'Paid', 'Unpaid'].map(chip => (
+                    <span key={chip} style={styles.chipPill}>{chip}</span>
+                  ))}
+                </div>
+
+                {/* Opportunity Grid Output Cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '20px' }}>
+                  {jobs.length === 0 ? (
+                    <div style={styles.emptyIllustrationState}>
+                      <div style={styles.searchLensGraphic}>🔍<span style={{fontSize:'14px', position:'absolute', bottom:'10px', right:'10px'}}>?</span></div>
+                      <h4 style={styles.emptyStateTitle}>No job listings found.</h4>
+                      <p style={styles.emptyStateSub}>Try adjusting your search or filters to discover available internships.</p>
+                    </div>
+                  ) : jobs.map(job => (
+                    <div key={job.id} style={styles.dataItemRow}>
+                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+                        <div>
+                          <h4 style={styles.itemTitle}>{job.title}</h4>
+                          <p style={styles.itemDescription}>{job.description}</p>
+                        </div>
+                      </div>
+                      <div style={styles.itemMetaLine}>
+                        <span>📍 {job.location || 'Remote'}</span>
+                        <span>•</span>
+                        <span>📝 Requirements: <strong>{job.requirements || 'N/A'}</strong></span>
+                        <span>•</span>
+                        <span>⏰ Deadline: <strong style={{ color: '#ef4444' }}>{job.deadline}</strong></span>
+                      </div>
+                      <button onClick={() => handleApply(job.id)} style={styles.applyInlineBtn}>Apply For Role</button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Student Project Submission Showcasing Layout */}
+              <section style={styles.contentCard}>
+                <div style={styles.cardHeader}>
+                  <span style={{ ...styles.cardIcon, backgroundColor: '#f5f3ff', color: '#8b5cf6' }}>📁</span>
+                  <div>
+                    <h3 style={styles.cardTitle}>Project Portfolio Showcase</h3>
+                    <p style={styles.cardSub}>Highlight your work to stand out to recruiters</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleAddProject} style={{ ...styles.searchBarRow, gap: '16px', alignItems: 'flex-end', background: 'none', padding: 0, marginTop: '20px' }}>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={styles.fieldLabel}>Project Title <span style={{color:'#ef4444'}}>*</span></label>
+                    <input type="text" placeholder="e.g. E-Commerce Web App" value={projectForm.title} onChange={e => setProjectForm({...projectForm, title: e.target.value})} style={styles.textInput} required />
+                  </div>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={styles.fieldLabel}>Live Demo / GitHub URL</label>
+                    <input type="text" placeholder="https://github.com/..." value={projectForm.link} onChange={e => setProjectForm({...projectForm, link: e.target.value})} style={styles.textInput} />
+                  </div>
+                  <button type="submit" style={{ ...styles.primaryActionBtn, height: '45px' }}>+ Add Project</button>
+                </form>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '25px' }}>
+                  {myProjects.length === 0 ? (
+                    <div style={styles.emptyIllustrationState}>
+                      <div style={{...styles.searchLensGraphic, backgroundColor: '#eff6ff', color: '#3b82f6'}}>📁<span style={{fontSize:'12px', position:'absolute', top:0, right:0}}>➕</span></div>
+                      <h4 style={styles.emptyStateTitle}>No projects added yet.</h4>
+                      <p style={styles.emptyStateSub}>Showcase your projects to improve your internship profile and attract recruiters.</p>
+                    </div>
+                  ) : myProjects.map(p => (
+                    <div key={p.id} style={styles.projectItemBar}>
+                      <span style={{marginRight: '8px'}}>🌟</span>
+                      <strong style={{ color: '#1e293b' }}>{p.title}</strong>
+                      <span style={{margin: '0 8px', color: '#cbd5e1'}}>—</span>
+                      <a href={p.link} target="_blank" rel="noreferrer" style={styles.projectLinkText}>{p.link || 'No Live Verification Link'}</a>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
+
+
+          {/* Feature 21: Completion Certificates */}
+          {user.role === 'Student' && (
+            <section style={styles.contentCard}>
               <div style={styles.cardHeader}>
-                <div style={{ ...styles.cardIcon, backgroundColor: '#f0fdf4', color: '#16a34a' }}>
-                  ✏️
-                </div>
+                <span style={{ ...styles.cardIcon, backgroundColor: '#ecfdf5', color: '#16a34a' }}>🏆</span>
                 <div>
-                  <h3 style={styles.cardTitle}>Edit Profile</h3>
-                  <p style={styles.cardSub}>Update your academic details and portfolio</p>
+                  <h3 style={styles.cardTitle}>My Completion Certificates</h3>
+                  <p style={styles.cardSub}>View certificates earned from completed internships</p>
                 </div>
+                <span style={styles.resultsBadge}>{certificates.length} certificates</span>
               </div>
 
-              <div style={styles.formLayout}>
-                <div style={styles.inputGroup}>
-                  <label style={styles.fieldLabel}>Major / Discipline</label>
-                  <input
-                    type="text"
-                    defaultValue={profile?.major || ''}
-                    placeholder="e.g. Computer Science"
-                    style={styles.textInput}
-                  />
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.fieldLabel}>Skills (comma separated)</label>
-                  <input
-                    type="text"
-                    defaultValue={profile?.skills || ''}
-                    placeholder="e.g. React, PHP, MySQL"
-                    style={styles.textInput}
-                  />
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.fieldLabel}>CGPA</label>
-                  <input
-                    type="text"
-                    defaultValue={profile?.cgpa || ''}
-                    placeholder="e.g. 3.8"
-                    style={styles.textInput}
-                  />
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.fieldLabel}>Resume Link</label>
-                  <input
-                    type="url"
-                    defaultValue={profile?.resume_url || ''}
-                    placeholder="https://..."
-                    style={styles.textInput}
-                  />
-                </div>
-                <button style={{ ...styles.primaryActionBtn, marginTop: '8px' }}>
-                  Save Profile
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {certificates.length === 0 ? (
+                  <div style={styles.emptyIllustrationState}>
+                    <div style={{ ...styles.searchLensGraphic, backgroundColor: '#ecfdf5', color: '#16a34a' }}>🏆</div>
+                    <h4 style={styles.emptyStateTitle}>No certificates available yet.</h4>
+                    <p style={styles.emptyStateSub}>
+                      Complete internships to receive your completion certificate.
+                    </p>
+                  </div>
+                ) : (
+                  certificates.map((certificate) => (
+                    <div key={certificate._id} style={styles.dataItemRow}>
+                      <h4 style={styles.itemTitle}>
+                        {certificate.certificateId}
+                      </h4>
+
+                      <p style={styles.itemDescription}>
+                        Job: {certificate.job?.title || 'Internship'}
+                      </p>
+
+                      <div style={styles.itemMetaLine}>
+                        <span>🏢 {certificate.company?.name || 'Company'}</span>
+                        <span>•</span>
+                        <span>
+                          📅 {new Date(certificate.issueDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Bottom Grid Cards (Recent Applications, Upcoming Interviews, Profile Completion) */}
+          {user.role === 'Student' && (
+            <div style={styles.bottomStatusGrid}>
+              <div style={styles.miniStatusCard}>
+                <div style={{display:'flex', justifyContent:'space-between'}}><span style={styles.miniIcon}>📊</span><span style={styles.soonBadge}>SOON</span></div>
+                <h4 style={styles.miniTitle}>Recent Applications</h4>
+                <p style={styles.miniSub}>Track the status of your submitted internship applications.</p>
+              </div>
+              <div style={styles.miniStatusCard}>
+                <div style={{display:'flex', justifyContent:'space-between'}}><span style={styles.miniIcon}>📅</span><span style={styles.soonBadge}>SOON</span></div>
+                <h4 style={styles.miniTitle}>Upcoming Interviews</h4>
+                <p style={styles.miniSub}>View scheduled interviews and prepare with AI-guided tips.</p>
+              </div>
+              <div style={styles.miniStatusCard}>
+                <div style={{display:'flex', justifyContent:'space-between'}}><span style={styles.miniIcon}>👤</span><span style={styles.soonBadge}>SOON</span></div>
+                <h4 style={styles.miniTitle}>Profile Completion</h4>
+                <p style={styles.miniSub}>Complete your student profile to increase visibility to recruiters.</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Sidebar - Notifications Feed + Upsell Badges */}
+        <div style={styles.rightColumn}>
+          <section style={styles.contentCard}>
+            <div style={{ ...styles.cardHeader, borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', marginBottom: '16px' }}>
+              <span style={{ ...styles.cardIcon, backgroundColor: '#eff6ff', color: '#2563eb' }}>🔔</span>
+              <div>
+                <h3 style={{ ...styles.cardTitle, margin: 0 }}>Alerts Feed</h3>
+                <span style={styles.alertUnreadText}>{unreadCount} unread</span>
+              </div>
+
+              <div style={styles.alertHeaderActions}>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={markAllNotificationsAsRead}
+                    style={styles.markAllButton}
+                  >
+                    Mark all read
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={fetchNotifications}
+                  style={styles.syncRefreshBtn}
+                  aria-label="Refresh notifications"
+                >
+                  🔄
                 </button>
               </div>
             </div>
-          )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '350px', overflowY: 'auto' }}>
+              {notifications.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '30px 10px' }}>
+                  <div style={styles.bellEmptyIcon}>🔔</div>
+                  <h5 style={{ margin: '10px 0 4px 0', fontSize: '14px', color: '#1e293b' }}>No notifications</h5>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.4' }}>We'll notify you about applications, interviews, and deadlines.</p>
+                </div>
+              ) : notifications.map((notification) => (
+                <button
+                  type="button"
+                  key={notification._id}
+                  onClick={() => markNotificationAsRead(notification._id)}
+                  style={{
+                    ...styles.notificationBubble,
+                    ...(notification.is_read
+                      ? styles.notificationBubbleRead
+                      : styles.notificationBubbleUnread)
+                  }}
+                >
+                  <span style={styles.notificationMessage}>
+                    {notification.message}
+                  </span>
+                  <span style={styles.notificationTime}>
+                    {formatNotificationTime(notification.createdAt)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Premium Sidebar Utilities */}
+          <div style={styles.sidebarSoonUtilityCard}>
+            <div style={styles.utilLeft}><span style={styles.utilIconSquare}>⚡</span><strong>Skill Match Score</strong></div>
+            <span style={styles.soonBadge}>COMING SOON</span>
+          </div>
+          <div style={styles.sidebarSoonUtilityCard}>
+            <div style={styles.utilLeft}><span style={{...styles.utilIconSquare, color:'#10b981', backgroundColor:'#ecfdf5'}}>✅</span><strong>Eligibility Status</strong></div>
+            <span style={styles.soonBadge}>COMING SOON</span>
+          </div>
+          <div style={styles.sidebarSoonUtilityCard}>
+            <div style={styles.utilLeft}><span style={{...styles.utilIconSquare, color:'#8b5cf6', backgroundColor:'#f5f3ff'}}>📄</span><strong>Resume Builder</strong></div>
+            <span style={styles.soonBadge}>COMING SOON</span>
+          </div>
         </div>
 
-        {/* Right Sidebar Column */}
-        <div style={styles.rightColumn}>
-          {profile && (
-            <section style={styles.contentCard}>
-              <div style={styles.cardHeader}>
-                <div style={{ ...styles.cardIcon, backgroundColor: '#fef3c7', color: '#d97706' }}>
-                  👤
-                </div>
-                <div>
-                  <h3 style={{ ...styles.cardTitle, margin: 0 }}>My Profile</h3>
-                  <p style={{ ...styles.cardSub, margin: 0 }}>Quick Profile Summary</p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                <div><strong>Major:</strong> {profile.major || 'Not set'}</div>
-                <div><strong>Skills:</strong> {profile.skills || 'No skills added'}</div>
-                <div><strong>CGPA:</strong> {profile.cgpa || 'N/A'}</div>
-                {profile.resume_url && (
-                  <div style={{ marginTop: '4px' }}>
-                    <a
-                      href={profile.resume_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}
-                    >
-                      📄 View Resume
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={() => setActiveTab('profile')}
-                style={{ ...styles.primaryActionBtn, marginTop: '16px', width: '100%', padding: '8px 12px', fontSize: '13px' }}
-              >
-                ✏️ Edit Student Profile
-              </button>
-            </section>
-          )}
-        </div>
       </div>
     </div>
   );
 }
 
-// Inline Styles Object
 const styles = {
-  dashboardContainer: {
-    backgroundColor: '#f8fafc',
-    minHeight: '100vh',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-    color: '#0f172a',
-    paddingBottom: '40px'
-  },
-  navbar: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '12px 32px',
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e2e8f0',
-    position: 'sticky',
-    top: 0,
-    zIndex: 100
-  },
-  navLeft: { display: 'flex', alignItems: 'center', gap: '12px' },
-  logoBadge: { fontSize: '20px' },
-  logoText: { fontSize: '20px', fontWeight: '800', color: '#1e293b', letterSpacing: '-0.5px' },
-  divider: { color: '#cbd5e1', fontSize: '18px' },
-  navTabBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '6px 12px' },
-  navRight: { display: 'flex', alignItems: 'center', gap: '20px' },
-
+  dashboardContainer: { minHeight: '100vh', backgroundColor: '#f8fafc', color: '#1e293b', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', paddingBottom: '60px' },
+  navbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '14px 40px', borderBottom: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' },
+  navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
+  logoBadge: { backgroundColor: '#2563eb', color: '#fff', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' },
+  logoText: { fontSize: '18px', fontWeight: '700', color: '#0f172a' },
+  divider: { color: '#cbd5e1', margin: '0 4px' },
+  breadcrumbLink: { fontSize: '14px', color: '#64748b' },
+  breadcrumbArrow: { fontSize: '12px', color: '#94a3b8' },
+  breadcrumbActive: { fontSize: '14px', color: '#2563eb', fontWeight: '600', textTransform: 'capitalize' },
+  navRight: { display: 'flex', alignItems: 'center', gap: '16px' },
   notificationWrapper: { position: 'relative' },
-  notificationBellButton: {
-    background: '#f1f5f9',
-    border: 'none',
-    borderRadius: '50%',
-    width: '38px',
-    height: '38px',
-    cursor: 'pointer',
-    fontSize: '16px',
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: '-2px',
-    right: '-2px',
-    backgroundColor: '#ef4444',
-    color: '#ffffff',
-    fontSize: '10px',
-    fontWeight: 'bold',
-    borderRadius: '10px',
-    padding: '2px 6px',
-    border: '2px solid #ffffff'
-  },
-  notificationDropdown: {
-    position: 'absolute',
-    right: 0,
-    top: '48px',
-    width: '320px',
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-    border: '1px solid #e2e8f0',
-    overflow: 'hidden',
-    zIndex: 200
-  },
-  notificationDropdownHeader: {
-    padding: '12px 16px',
-    borderBottom: '1px solid #f1f5f9',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc'
-  },
-  notificationDropdownTitle: { margin: 0, fontSize: '14px', fontWeight: '700', color: '#0f172a' },
-  notificationDropdownSubtitle: { fontSize: '11px', color: '#64748b' },
-  markAllButton: { background: 'none', border: 'none', color: '#2563eb', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
-  notificationDropdownList: { maxHeight: '300px', overflowY: 'auto' },
-  notificationEmptyText: { padding: '20px', textAlign: 'center', margin: 0, fontSize: '13px', color: '#64748b' },
-  notificationDropdownItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    width: '100%',
-    padding: '12px 16px',
-    textAlign: 'left',
-    border: 'none',
-    borderBottom: '1px solid #f1f5f9',
-    cursor: 'pointer',
-    background: 'none'
-  },
+  notificationBellButton: { width: '38px', height: '38px', border: '1px solid #e2e8f0', borderRadius: '10px', backgroundColor: '#ffffff', cursor: 'pointer', position: 'relative', color: '#64748b', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  notificationBadge: { position: 'absolute', top: '-5px', right: '-5px', minWidth: '18px', height: '18px', padding: '0 4px', boxSizing: 'border-box', backgroundColor: '#ef4444', color: '#ffffff', borderRadius: '20px', border: '2px solid #ffffff', fontSize: '10px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  notificationDropdown: { position: 'absolute', top: '48px', right: 0, width: '360px', maxHeight: '430px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', boxShadow: '0 20px 45px rgba(15,23,42,0.18)', overflow: 'hidden', zIndex: 1000 },
+  notificationDropdownHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderBottom: '1px solid #e2e8f0' },
+  notificationDropdownTitle: { margin: 0, fontSize: '15px', color: '#0f172a' },
+  notificationDropdownSubtitle: { display: 'block', marginTop: '3px', fontSize: '11px', color: '#64748b' },
+  notificationDropdownList: { maxHeight: '340px', overflowY: 'auto' },
+  notificationDropdownItem: { width: '100%', border: 'none', borderBottom: '1px solid #f1f5f9', padding: '14px 16px', textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '6px' },
   notificationDropdownItemUnread: { backgroundColor: '#eff6ff' },
   notificationDropdownItemRead: { backgroundColor: '#ffffff' },
-  notificationMessage: { fontSize: '13px', color: '#1e293b', marginBottom: '4px', lineHeight: '1.4' },
-  notificationTime: { fontSize: '10px', color: '#94a3b8' },
+  notificationEmptyText: { margin: 0, padding: '30px 16px', textAlign: 'center', color: '#64748b', fontSize: '13px' },
+  userAvatar: { width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#0ea5e9', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '13px' },
+  userInfo: { display: 'flex', flexDirection: 'column' },
+  userName: { fontSize: '14px', fontWeight: '600', color: '#0f172a' },
+  userRoleText: { fontSize: '12px', color: '#64748b', textTransform: 'capitalize' },
+  signOutBtn: { display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', backgroundColor: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#334155', transition: 'all 0.2s' },
+  
+  heroBanner: { background: 'linear-gradient(135deg, #1e40af 0%, #0284c7 60%, #0d9488 100%)', margin: '30px 40px', borderRadius: '20px', padding: '40px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', overflow: 'hidden', boxShadow: '0 10px 25px -5px rgba(30,64,175,0.15)' },
+  heroLeft: { flex: 1, zIndex: 2 },
+  workspacePill: { display: 'inline-block', backgroundColor: 'rgba(255,255,255,0.15)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: '600', marginBottom: '16px', backdropFilter: 'blur(4px)' },
+  heroTitle: { fontSize: '32px', fontWeight: '700', margin: '0 0 10px 0', letterSpacing: '-0.5px' },
+  heroSubtitle: { fontSize: '15px', color: 'rgba(255,255,255,0.85)', margin: '0 0 30px 0', maxWidth: '600px', lineHeight: '1.5' },
+  metricsRow: { display: 'flex', gap: '16px' },
+  metricCard: { backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', padding: '14px 24px', borderRadius: '14px', minWidth: '100px' },
+  metricValue: { display: 'block', fontSize: '24px', fontWeight: '700', marginBottom: '2px' },
+  metricLabel: { fontSize: '12px', color: 'rgba(255,255,255,0.75)' },
+  heroIllustration: { position: 'absolute', right: '40px', bottom: '10px', width: '220px', height: '160px', opacity: 0.25, zIndex: 1 },
+  graphicWindow: { width: '100%', height: '100%', border: '3px solid #fff', borderRadius: '12px', padding: '15px', boxSizing: 'border-box' },
+  graphicLines: { width: '50%', height: '6px', backgroundColor: '#fff', borderRadius: '4px' },
 
-  profileHeaderBtn: { display: 'flex', alignItems: 'center', gap: '10px' },
-  userAvatar: {
-    width: '36px',
-    height: '36px',
-    borderRadius: '50%',
+  workspaceLayout: { display: 'grid', gridTemplateColumns: '2.1fr 0.9fr', gap: '30px', margin: '0 40px' },
+  leftColumn: { display: 'flex', flexDirection: 'column', gap: '30px' },
+  rightColumn: { display: 'flex', flexDirection: 'column', gap: '16px' },
+  
+  contentCard: { backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '28px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.01)' },
+  cardHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', position: 'relative' },
+  cardIcon: { width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 'bold' },
+  cardTitle: { fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 2px 0' },
+  cardSub: { fontSize: '13px', color: '#64748b', margin: 0 },
+  resultsBadge: { position: 'absolute', right: 0, top: '8px', backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '12px', padding: '4px 10px', borderRadius: '30px', fontWeight: '500' },
+  
+  searchBarRow: { display: 'flex', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '6px 6px 6px 16px', alignItems: 'center', gap: '10px' },
+  searchInnerIcon: { color: '#94a3b8', fontSize: '16px' },
+  searchInputField: { flex: 1, border: 'none', outline: 'none', color: '#334155', fontSize: '14px', backgroundColor: 'transparent' },
+  primaryActionBtn: { backgroundColor: '#2563eb', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', boxShadow: '0 4px 12px rgba(37,99,235,0.15)' },
+  
+  filterChipsRow: { display: 'flex', gap: '8px', marginTop: '12px' },
+  chipPill: { fontSize: '13px', color: '#475569', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', padding: '6px 16px', borderRadius: '30px', cursor: 'pointer' },
+  
+  emptyIllustrationState: { textAlign: 'center', padding: '40px 20px', border: '1px dashed #e2e8f0', borderRadius: '14px', backgroundColor: '#f8fafc' },
+  searchLensGraphic: { width: '54px', height: '54px', borderRadius: '50%', backgroundColor: '#eff6ff', color: '#2563eb', fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', position: 'relative' },
+  emptyStateTitle: { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 6px 0' },
+  emptyStateSub: { fontSize: '13px', color: '#64748b', margin: 0, maxWidth: '340px', margin: '0 auto', lineHeight: '1.5' },
+  
+  dataItemRow: { padding: '20px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' },
+  itemTitle: { fontSize: '16px', fontWeight: '700', color: '#2563eb', margin: '0 0 6px 0' },
+  itemDescription: { fontSize: '14px', color: '#475569', margin: '0 0 12px 0', lineHeight: '1.5' },
+  itemMetaLine: { display: 'flex', gap: '10px', fontSize: '12px', color: '#64748b', marginBottom: '14px' },
+  applyInlineBtn: { backgroundColor: '#10b981', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' },
+  
+  formLayout: { display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '15px' },
+  inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
+  fieldLabel: { fontSize: '13px', fontWeight: '600', color: '#344155' },
+  textInput: { width: '100%', padding: '12px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', backgroundColor: '#fff', color: '#334155', fontSize: '14px', outline: 'none', boxSizing: 'border-box' },
+  projectItemBar: { display: 'flex', alignItems: 'center', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px' },
+  projectLinkText: { color: '#8b5cf6', textDecoration: 'none', fontWeight: '500' },
+  
+  bottomStatusGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '10px' },
+  miniStatusCard: { backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' },
+  miniIcon: { fontSize: '20px' },
+  miniTitle: { fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: '12px 0 4px 0' },
+  miniSub: { fontSize: '12px', color: '#64748b', margin: 0, lineHeight: '1.4' },
+  soonBadge: { backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '10px', fontWeight: '700', padding: '3px 8px', borderRadius: '4px', letterSpacing: '0.5px' },
+  
+  alertUnreadText: { display: 'block', marginTop: '3px', fontSize: '11px', color: '#64748b' },
+  alertHeaderActions: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' },
+  markAllButton: { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '11px', fontWeight: '600', padding: '4px' },
+  syncRefreshBtn: { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '16px', padding: '4px' },
+  bellEmptyIcon: { fontSize: '28px', color: '#cbd5e1' },
+  notificationBubble: { width: '100%', padding: '12px 14px', borderRadius: '10px', borderLeft: '4px solid #2563eb', borderTop: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', fontSize: '13px', lineHeight: '1.4', color: '#334155', textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '6px' },
+  notificationBubbleUnread: { backgroundColor: '#eff6ff', fontWeight: '600' },
+  notificationBubbleRead: { backgroundColor: '#ffffff', fontWeight: '400', opacity: 0.82 },
+  notificationMessage: { color: '#334155', fontSize: '13px', lineHeight: '1.4' },
+  notificationTime: { color: '#94a3b8', fontSize: '10px', fontWeight: '400' },
+  
+  facultySummaryRow: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', marginBottom: '20px' },
+  facultySummaryCard: { padding: '14px 16px', borderRadius: '12px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '3px' },
+  facultySummaryValue: { fontSize: '22px', fontWeight: '700', color: '#0f172a' },
+  facultySummaryLabel: { fontSize: '12px', color: '#64748b', fontWeight: '600' },
+  facultyApplicationList: { display: 'flex', flexDirection: 'column', gap: '18px' },
+  facultyApplicationCard: { padding: '20px', borderRadius: '14px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', boxShadow: '0 2px 6px rgba(15,23,42,0.03)' },
+  facultyApplicationTopRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' },
+  facultyStudentName: { margin: '0 0 4px 0', fontSize: '17px', color: '#0f172a', fontWeight: '700' },
+  facultyStudentEmail: { margin: 0, fontSize: '12px', color: '#64748b' },
+  reviewStatusBadge: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '82px', padding: '6px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' },
+  reviewStatusPending: { backgroundColor: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' },
+  reviewStatusApproved: { backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' },
+  reviewStatusRejected: { backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' },
+  facultyDetailsGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px', marginBottom: '18px' },
+  facultyDetailBox: { padding: '11px 12px', borderRadius: '9px', backgroundColor: '#f8fafc', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' },
+  facultyDetailLabel: { fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  facultyDetailValue: { fontSize: '13px', color: '#334155', fontWeight: '600' },
+  facultyNoteInput: { width: '100%', minHeight: '100px', padding: '12px 14px', border: '1px solid #cbd5e1', borderRadius: '9px', backgroundColor: '#ffffff', color: '#334155', fontSize: '14px', lineHeight: '1.5', resize: 'vertical', outline: 'none', boxSizing: 'border-box' },
+  facultyActionRow: { display: 'flex', gap: '10px', marginTop: '16px' },
+  facultyApproveBtn: { backgroundColor: '#16a34a', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' },
+  facultyRejectBtn: { backgroundColor: '#dc2626', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' },
+  disabledActionBtn: { opacity: 0.6, cursor: 'not-allowed' },
+  facultyReviewedInfo: { marginTop: '16px', padding: '12px 14px', borderRadius: '9px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '12px', color: '#64748b' },
+  
+  downloadCertificateBtn: {
+    marginTop: '14px',
     backgroundColor: '#2563eb',
     color: '#ffffff',
-    fontWeight: 'bold',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    border: 'none',
+    padding: '10px 18px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600',
     fontSize: '13px'
   },
-  userInfo: { display: 'flex', flexDirection: 'column' },
-  userName: { fontSize: '13px', fontWeight: '700', color: '#0f172a' },
-  userRoleText: { fontSize: '11px', color: '#64748b' },
-  signOutBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '8px 14px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '8px',
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#334155',
-    cursor: 'pointer'
-  },
 
-  heroBanner: {
-    padding: '32px',
-    backgroundColor: '#1e293b',
-    color: '#ffffff',
-    margin: '24px 32px',
-    borderRadius: '16px'
-  },
-  heroLeft: { maxWidth: '700px' },
-  workspacePill: {
-    display: 'inline-block',
-    padding: '4px 12px',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: '20px',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#38bdf8',
-    marginBottom: '12px'
-  },
-  heroTitle: { margin: '0 0 8px 0', fontSize: '26px', fontWeight: '800' },
-  heroSubtitle: { margin: 0, fontSize: '14px', color: '#94a3b8', lineHeight: '1.5' },
-
-  workspaceLayout: { display: 'flex', gap: '24px', padding: '0 32px' },
-  leftColumn: { flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' },
-  rightColumn: { width: '340px', display: 'flex', flexDirection: 'column', gap: '24px' },
-
-  contentCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: '16px',
-    padding: '24px',
-    border: '1px solid #e2e8f0',
-    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)'
-  },
-  cardHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' },
-  cardIcon: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '10px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '18px',
-    flexShrink: 0
-  },
-  cardTitle: { margin: '0 0 2px 0', fontSize: '16px', fontWeight: '700', color: '#0f172a' },
-  cardSub: { margin: 0, fontSize: '12px', color: '#64748b' },
-  resultsBadge: {
-    marginLeft: 'auto',
-    fontSize: '12px',
-    fontWeight: '600',
-    padding: '4px 10px',
-    backgroundColor: '#f1f5f9',
-    borderRadius: '12px',
-    color: '#475569'
-  },
-
-  formLayout: { display: 'flex', flexDirection: 'column', gap: '16px' },
-  inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
-  fieldLabel: { fontSize: '12px', fontWeight: '700', color: '#334155' },
-  textInput: {
-    padding: '10px 14px',
-    borderRadius: '8px',
-    border: '1px solid #cbd5e1',
-    fontSize: '13px',
-    outline: 'none',
-    width: '100%',
-    boxSizing: 'border-box'
-  },
-  primaryActionBtn: {
-    padding: '10px 18px',
-    backgroundColor: '#2563eb',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '8px',
-    fontWeight: '700',
-    fontSize: '13px',
-    cursor: 'pointer',
-    alignSelf: 'flex-start'
-  },
-
-  searchBarRow: { display: 'flex', gap: '12px' },
-  searchInputField: {
-    flex: 1,
-    padding: '10px 14px',
-    borderRadius: '8px',
-    border: '1px solid #cbd5e1',
-    fontSize: '13px',
-    outline: 'none'
-  },
-
-  dataItemRow: {
-    padding: '16px',
-    borderRadius: '12px',
-    border: '1px solid #e2e8f0',
-    backgroundColor: '#f8fafc'
-  },
-  itemTitle: { margin: '0 0 6px 0', fontSize: '15px', fontWeight: '700', color: '#1e293b' },
-  itemDescription: { margin: '0 0 10px 0', fontSize: '13px', color: '#475569', lineHeight: '1.4' },
-  itemMetaLine: { display: 'flex', gap: '8px', fontSize: '12px', color: '#64748b', alignItems: 'center', marginBottom: '10px' },
-  deadlineClosedBadge: { fontSize: '12px', fontWeight: '700', color: '#b91c1c' },
-  applyInlineBtn: {
-    padding: '6px 14px',
-    backgroundColor: '#16a34a',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '6px',
-    fontWeight: '600',
-    fontSize: '12px',
-    cursor: 'pointer'
-  },
-  soonBadge: { padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600' },
-  projectLinkText: { fontSize: '12px', color: '#2563eb', textDecoration: 'none', fontWeight: '600', display: 'inline-block', marginTop: '6px' },
-
-  emptyIllustrationState: { textAlign: 'center', padding: '30px 20px' },
-  searchLensGraphic: {
-    width: '48px',
-    height: '48px',
-    borderRadius: '50%',
-    backgroundColor: '#eff6ff',
-    color: '#2563eb',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '20px',
-    margin: '0 auto 12px auto'
-  },
-  emptyStateTitle: { margin: '0 0 4px 0', fontSize: '14px', fontWeight: '700', color: '#1e293b' },
-  emptyStateSub: { margin: 0, fontSize: '12px', color: '#64748b', maxWidth: '300px', marginInline: 'auto' },
-
-  alertUnreadText: { fontSize: '11px', color: '#2563eb', fontWeight: '600' },
-  bellEmptyIcon: { fontSize: '24px', opacity: 0.5 },
-  notificationBubble: {
-    display: 'flex',
-    flexDirection: 'column',
-    padding: '10px 12px',
-    borderRadius: '8px',
-    border: 'none',
-    textAlign: 'left',
-    cursor: 'pointer',
-    width: '100%'
-  },
-  notificationBubbleUnread: { backgroundColor: '#eff6ff', borderLeft: '3px solid #2563eb' },
-  notificationBubbleRead: { backgroundColor: '#f8fafc', borderLeft: '3px solid #cbd5e1' }
+  sidebarSoonUtilityCard: { backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' },
+  utilLeft: { display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#0f172a' },
+  utilIconSquare: { width: '32px', height: '32px', backgroundColor: '#fff7ed', color: '#f97316', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }
 };
